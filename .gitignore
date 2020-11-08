@@ -1,0 +1,8 @@
+!.gitignore
+!.gitkeep
+
+# IDEs
+.idea/
+.vs/
+
+userHandle.log

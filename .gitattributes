@@ -1,0 +1,43 @@
+# 这文件作用: 制定换行符规则
+
+# 文件的行尾自动转换.如果是文本文件,则在文件入Git库时,行尾自动转换为LF.如果已经在入Git库中的文件的行尾是GRLF,则文件在入Git库时,不再转换为LF.
+* text=auto
+
+# 对于.txt文件,标记为文本文件,并进行行尾规范化.
+*.txt text
+
+# 对于图片文件,标记为非文本文件
+*.jpg -text
+*.jpeg -text
+*.png -text
+*.svg -text
+*.ico -text
+
+# 视为二进制文件,不进行比较(git diff)
+*.sql binary
+*.zip binary
+*.xlsx binary
+*.xls binary
+*.docx binary
+*.doc binary
+*.pdf binary
+*.pbxroj binary
+
+# 对于.vcproj文件,标记为文本文件,在文件入Git库时进行规范化,行尾转换为LF.在检测到出工作目录时,行尾自动转换为GRLF.
+*.vcproj text eol=crlf
+
+# 标记为文本文件,在文件入Git库时进行规范化,即行尾为LF.在检出到工作目录时,行尾也不会转换为CRLF(即保持LF).
+*.sh text eol=lf
+*.go text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.toml text eol=lf
+*.phtml text eol=lf
+*.json text eol=lf
+*.php text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.volt text eol=lf
+*.vue text eol=lf

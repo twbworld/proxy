@@ -1,0 +1,16 @@
+[
+    {
+        "username": "twbworld",
+        "password": "twbworld",
+        "quota": -1,
+        "enable": true,
+        "level": 1
+    },
+    {
+        "username": "test",
+        "password": "test",
+        "quota": 10,
+        "enable": true,
+        "level": 0
+    }
+]
