@@ -10,7 +10,7 @@ class UserHandle
     private $username = 'root';
     private $password = 'tp';
     private $usersFile = 'users.json';
-    private $logFile = 'userHandle.log';    
+    private $logFile = 'userHandle.log';
     private $quotaMax = '1073741824'; //1G*1024*1024*1024 = 1073741824byte
     private $db;
 
@@ -114,7 +114,7 @@ class UserHandle
 
     }
 
-    private function delUser($username)
+    private function delUser($id)
     {
         $sql = 'DELETE FROM `users` where `id` = :id';
         $sth = $this->db->prepare($sql);
