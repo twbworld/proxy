@@ -16,6 +16,7 @@ class UserHandle
 
     public function __construct()
     {
+        date_default_timezone_set('Asia/Shanghai');
         $dsn = 'mysql:dbname=' . $this->dbname . ';host=' . $this->host;
 
         try {
@@ -41,6 +42,7 @@ class UserHandle
                     exit;
                 }
                 if ($value['enable'] === true) {
+                    $value['quota'] > 0 && ($value['quota'] = $value['quota'] * $this->quotaMax);
                     $usersDataEnable[] = $value;
                 }
             });
@@ -93,7 +95,7 @@ class UserHandle
             'id' => $value['id'],
             'password' => $this->hash($value['password']),
             'passwordShow' => $this->base64($value['password']),
-            'quota' => ($value['quota'] ?? -1) * $this->quotaMax,
+            'quota' => $value['quota'] ?? -1,
         ]);
 
     }
@@ -107,7 +109,7 @@ class UserHandle
             'username' => $value['username'],
             'password' => $this->hash($value['password']),
             'passwordShow' => $this->base64($value['password']),
-            'quota' => ($value['quota'] ?? -1) * $this->quotaMax,
+            'quota' => $value['quota'] ?? -1,
             'download' => 0,
             'upload' => 0,
         ]);
@@ -141,7 +143,7 @@ class UserHandle
             array_walk($usersJson, function ($value) use ($usersMysqlNew, &$userIsset, &$log) {
                 if (isset($usersMysqlNew[$value['username']])) {
                     $userIsset[] = $value['username'];
-                    if ($usersMysqlNew[$value['username']]['passwordShow'] !== $this->base64($value['passwordShow']) || $usersMysqlNew[$value['username']]['quota'] != ($value['quota'] * $this->quotaMax)) {
+                    if ($usersMysqlNew[$value['username']]['passwordShow'] !== $this->base64($value['password']) || $usersMysqlNew[$value['username']]['quota'] != $value['quota']) {
                         $value['id'] = $usersMysqlNew[$value['username']]['id'];
                         $this->updateUser($value); //改
                         $log[] = 'update: ' . json_encode($usersMysqlNew[$value['username']]) . ' => ' . json_encode($value);
@@ -168,7 +170,5 @@ class UserHandle
     }
 
 }
-
-date_default_timezone_set('Asia/Shanghai');
 
 (new UserHandle())->handle();
