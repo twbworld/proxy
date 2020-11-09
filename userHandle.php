@@ -69,7 +69,7 @@ class UserHandle
         return hash('sha224', $str);
     }
 
-    private function log($arr)
+    public function log($arr)
     {
         if (!is_array($arr)) {
             $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . (string) $arr;
@@ -146,11 +146,11 @@ class UserHandle
                     if ($usersMysqlNew[$value['username']]['passwordShow'] !== $this->base64($value['password']) || $usersMysqlNew[$value['username']]['quota'] != $value['quota']) {
                         $value['id'] = $usersMysqlNew[$value['username']]['id'];
                         $this->updateUser($value); //改
-                        $log[] = 'update: ' . json_encode($usersMysqlNew[$value['username']]) . ' => ' . json_encode($value);
+                        $log[] = 'update: ' . json_encode($usersMysqlNew[$value['username']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' => ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     }
                 } else {
                     $this->addUser($value); //增
-                    $log[] = 'add: ' . json_encode($value);
+                    $log[] = 'add: ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 }
             });
         }
@@ -159,7 +159,7 @@ class UserHandle
         if (count($userDiff) > 0) {
             array_walk($userDiff, function ($value) use ($usersMysqlNew, &$log) {
                 $this->delUser($usersMysqlNew[$value]['id']); //删
-                $log[] = 'del: ' . json_encode($usersMysqlNew[$value]);
+                $log[] = 'del: ' . json_encode($usersMysqlNew[$value], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             });
         }
 
