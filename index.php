@@ -53,7 +53,9 @@ class Proxy
             array_walk($usersData, function ($value) use ($user) {
                 if ($value['username'] === $user) {
                     // trojan://trojan@tg.twbhub.cf:443?sni=tg.twbhub.cf#外网信息复杂_理智分辨真假
-                    $subscription = 'trojan://' . $value['username'] . '@' . self::$trojanDomain . ':' . self::$trojanPort . '?sni=' . self::$trojanDomain . '#外网信息复杂_理智分辨真假'; //trojan分享链接
+                    // $subscription = 'trojan://' . $value['username'] . '@' . self::$trojanDomain . ':' . self::$trojanPort . '?sni=' . self::$trojanDomain . '#外网信息复杂_理智分辨真假'; //trojan分享链接
+                    // trojan://trojan@tg.twbhub.cf:443#外网信息复杂_理智分辨真假
+                    $subscription = 'trojan://' . $value['username'] . '@' . self::$trojanDomain . ':' . self::$trojanPort . '#外网信息复杂_理智分辨真假'; //trojan分享链接
                     if (isset($value['level']) && $value['level'] > 0) {
                         $subscription .= PHP_EOL . self::$vmessUrl;
                     }

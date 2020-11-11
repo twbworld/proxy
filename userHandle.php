@@ -11,7 +11,7 @@ class UserHandle
     private $password = 'tp';
     private $usersFile = 'users.json';
     private $logFile = 'userHandle.log';
-    private $quotaMax = '1073741824'; //1G*1024*1024*1024 = 1073741824byte
+    private $quotaMax = '1073741824'; //入库需要, 1G*1024*1024*1024 = 1073741824byte
     private $db;
 
     public function __construct()
