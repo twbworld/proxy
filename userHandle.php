@@ -74,8 +74,7 @@ class UserHandle
         if (!is_array($arr)) {
             $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . (string) $arr;
             file_put_contents($this->logFile, $log, FILE_APPEND | LOCK_EX);
-        }
-        if (count($arr) > 0) {
+        }elseif (count($arr) > 0) {
             array_walk($arr, function ($value) {
                 $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . $value;
                 file_put_contents($this->logFile, $log, FILE_APPEND | LOCK_EX);
@@ -125,6 +124,12 @@ class UserHandle
         ]);
     }
 
+    /**
+     * 更新用户表
+     * @dateTime 2020-11-11T23:47:23+0800
+     * @author   twb<1174865138@qq.com>
+     * @return   [type]                   [description]
+     */
     public function handle()
     {
         $usersJson = $this->getUsersByJson();
@@ -169,6 +174,20 @@ class UserHandle
 
     }
 
-}
+    /**
+     * 清除流量上下行的记录
+     * @dateTime 2020-11-11T23:46:04+0800
+     * @author   twb<1174865138@qq.com>
+     */
+    public function clear()
+    {
+        $sql = 'UPDATE `users` SET `download` = :download, `upload` = :upload';
+        $sth = $this->db->prepare($sql);
+        $sth->execute([
+            'download' => 0,
+            'upload' => 0,
+        ]);
+        $this->log(['!!!!!!!!!!!!!!!!!!!!! Task !!!!!!!!!!!!!!!!!!!!!!']);
+    }
 
-(new UserHandle())->handle();
+}

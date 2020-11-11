@@ -7,11 +7,12 @@ if (!isset($pwd) || empty($pwd) || $pwd !== 'pwd') {
 
 require 'userHandle.php';
 $userHandleInfo = new UserHandle();
-$shell = 'cd /usr/share/nginx/proxy && git pull origin master 2>&1'; //这里要提前人工输入"yes"(git要确认私钥)
+$shell = 'cd /usr/share/nginx/proxy && git pull origin master 2>&1';
 
 try {
     $str = exec($shell,$return);
     $userHandleInfo->handle();
+
     $userHandleInfo->log(['      拉取代码 :      ' . json_encode((array) $return, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]);
     exit('ok');
 } catch (Exception $e) {
