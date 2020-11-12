@@ -7,7 +7,7 @@ if (!isset($pwd) || empty($pwd) || $pwd !== 'pwd') {
 
 require 'userHandle.php';
 $userHandleInfo = new UserHandle();
-$shell = 'cd /usr/share/nginx/proxy && git pull origin master 2>&1';
+$shell = 'cd /usr/share/nginx/proxy && git checkout -- . && git pull origin master 2>&1';
 
 try {
     $str = exec($shell,$return);
