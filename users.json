@@ -9,7 +9,14 @@
     {
         "username": "test",
         "password": "test",
-        "quota": 50,
+        "quota": 100,
+        "enable": true,
+        "level": 0
+    },
+    {
+        "username": "test2",
+        "password": "test2",
+        "quota": 100,
         "enable": true,
         "level": 0
     }

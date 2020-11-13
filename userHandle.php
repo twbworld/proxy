@@ -1,23 +1,27 @@
 <?php
 
-/**
- * 处理用户信息,对mysql数据库作处理
- */
-class UserHandle
+abstract class db
+{
+    abstract public static function getInstance();
+    abstract public function beginTransaction();
+    abstract public function commit();
+    abstract public function add($sql, $param);
+    abstract public function del($sql, $param);
+    abstract public function update($sql, $param);
+    abstract public function select($sql);
+}
+
+class Users extends db
 {
     private static $dbname = 'trojan';
     private static $host = 'mysql';
     private static $username = 'root';
     private static $password = 'tp';
-    private static $usersFile = 'users.json';
-    private static $logFile = 'userHandle.log';
-    private static $quotaMax = '1073741824'; //入库需要, 1G*1024*1024*1024 = 1073741824byte
     private static $db = null;
     private static $_instance = null;
 
     private function __construct()
     {
-        date_default_timezone_set('Asia/Shanghai');
         $dsn = 'mysql:dbname=' . self::$dbname . ';host=' . self::$host;
 
         try {
@@ -35,11 +39,126 @@ class UserHandle
 
     public static function getInstance()
     {
-        if (!(self::$_instance instanceof UserHandle)) {
-            self::$_instance = new UserHandle();
+        if (!(self::$_instance instanceof Users)) {
+            self::$_instance = new Users();
         }
         return self::$_instance;
     }
+
+    public function beginTransaction()
+    {
+        $sth = self::$db->beginTransaction;
+    }
+
+    public function commit()
+    {
+        $sth = self::$db->commit;
+    }
+
+    public function add($sql, $param)
+    {
+        $sth = self::$db->prepare($sql);
+        return $sth->execute($param);
+    }
+    public function del($sql, $param)
+    {
+        $sth = self::$db->prepare($sql);
+        return $sth->execute($param);
+    }
+    public function update($sql, $param)
+    {
+        $sth = self::$db->prepare($sql);
+        return $sth->execute($param);
+    }
+    public function select($sql)
+    {
+
+        $sth = self::$db->query($sql);
+        return $sth->fetchAll(\PDO::FETCH_ASSOC);
+    }
+}
+
+interface Factory
+{
+    public static function beginTransaction();
+    public static function commit();
+    public static function addUser($value);
+    public static function delUser($id);
+    public static function updateUser($value);
+    public static function selectUser();
+    public static function clear();
+}
+
+class UsersDbHandle implements Factory
+{
+    public static function beginTransaction()
+    {
+        (Users::getInstance())->beginTransaction();
+    }
+    public static function commit()
+    {
+        (Users::getInstance())->commit();
+    }
+    public static function addUser($value)
+    {
+        $sql = 'INSERT INTO `users`(`username`, `password`, `passwordShow`, `quota`, `download`, `upload`)
+                VALUES(:username, :password, :passwordShow, :quota, :download, :upload)';
+        return (Users::getInstance())->add($sql, [
+            'username' => $value['username'],
+            'password' => $value['password'],
+            'passwordShow' => $value['passwordShow'],
+            'quota' => $value['quota'] ?? -1,
+            'download' => 0,
+            'upload' => 0,
+        ]);
+    }
+
+    public static function delUser($id)
+    {
+        $sql = 'DELETE FROM `users` where `id` = :id';
+        return (Users::getInstance())->del($sql, [
+            'id' => $id,
+        ]);
+    }
+    public static function updateUser($value)
+    {
+        $sql = 'SELECT `username` FROM `users` WHERE `id` = ' . $value['id'] . ' FOR UPDATE';
+        (Users::getInstance())->select($sql);
+
+        $sql = 'UPDATE `users` SET `password` = :password, `passwordShow` = :passwordShow, `quota` = :quota WHERE `id` = :id';
+        return (Users::getInstance())->update($sql, [
+            'id' => $value['id'],
+            'password' => $value['password'],
+            'passwordShow' => $value['passwordShow'],
+            'quota' => $value['quota'] ?? -1,
+        ]);
+    }
+    public static function selectUser()
+    {
+        $sql = 'SELECT `id`, `username`, `passwordShow`, `quota` FROM `users`';
+        return (Users::getInstance())->select($sql);
+    }
+
+    public static function clear()
+    {
+        $sql = 'UPDATE `users` SET `download` = :download, `upload` = :upload';
+        return (Users::getInstance())->update($sql, [
+            'download' => 0,
+            'upload' => 0,
+        ]);
+    }
+
+}
+
+/**
+ * 处理用户信息,对mysql数据库作处理
+ */
+class UserHandle
+{
+
+    private static $usersFile = 'users.json';
+    private static $logFile = 'userHandle.log';
+    private static $quotaMax = '1073741824'; //入库需要, 1G*1024*1024*1024 = 1073741824byte
 
     private static function getUsersByJson()
     {
@@ -57,20 +176,14 @@ class UserHandle
                 }
                 if ($value['enable'] === true) {
                     $value['quota'] > 0 && ($value['quota'] = $value['quota'] * self::$quotaMax);
+                    $value['passwordShow'] = self::base64($value['password']);
+                    $value['password'] = self::hash($value['password']);
                     $usersDataEnable[] = $value;
                 }
             });
         }
 
         return $usersDataEnable;
-    }
-
-    private static function getUsersByMysql()
-    {
-        $sql = 'SELECT `id`, `username`, `passwordShow`, `quota` FROM `users`';
-        $sth = self::$db->query($sql);
-        $usersData = $sth->fetchAll(\PDO::FETCH_ASSOC);
-        return $usersData;
     }
 
     private static function base64($str)
@@ -83,48 +196,6 @@ class UserHandle
         return hash('sha224', $str);
     }
 
-    private static function updateUser($value)
-    {
-        $sql = 'SELECT `username` FROM `users` WHERE `id` = ' . $value['id'] . ' FOR UPDATE';
-        $sth = self::$db->query($sql);
-        $sth->fetchAll(\PDO::FETCH_ASSOC);
-
-        $sql = 'UPDATE `users` SET `password` = :password, `passwordShow` = :passwordShow, `quota` = :quota WHERE `id` = :id';
-        $sth = self::$db->prepare($sql);
-        $sth->execute([
-            'id' => $value['id'],
-            'password' => self::hash($value['password']),
-            'passwordShow' => self::base64($value['password']),
-            'quota' => $value['quota'] ?? -1,
-        ]);
-
-    }
-
-    private static function addUser($value)
-    {
-        $sql = 'INSERT INTO `users`(`username`, `password`, `passwordShow`, `quota`, `download`, `upload`)
-                VALUES(:username, :password, :passwordShow, :quota, :download, :upload)';
-        $sth = self::$db->prepare($sql);
-        $sth->execute([
-            'username' => $value['username'],
-            'password' => self::hash($value['password']),
-            'passwordShow' => self::base64($value['password']),
-            'quota' => $value['quota'] ?? -1,
-            'download' => 0,
-            'upload' => 0,
-        ]);
-
-    }
-
-    private static function delUser($id)
-    {
-        $sql = 'DELETE FROM `users` where `id` = :id';
-        $sth = self::$db->prepare($sql);
-        $sth->execute([
-            'id' => $id,
-        ]);
-    }
-
     /**
      * 更新用户表
      * @dateTime 2020-11-11T23:47:23+0800
@@ -133,8 +204,10 @@ class UserHandle
      */
     public function handle()
     {
+        date_default_timezone_set('Asia/Shanghai');
+
         $usersJson = self::getUsersByJson();
-        $usersMysql = self::getUsersByMysql();
+        $usersMysql = UsersDbHandle::selectUser();
         $usersMysqlNew = $userIsset = $log = [];
 
         if (count($usersMysql) > 0) {
@@ -143,19 +216,19 @@ class UserHandle
             });
         }
 
-        self::$db->beginTransaction();
+        UsersDbHandle::beginTransaction();
 
         if (count($usersJson) > 0) {
             array_walk($usersJson, function ($value) use ($usersMysqlNew, &$userIsset, &$log) {
                 if (isset($usersMysqlNew[$value['username']])) {
                     $userIsset[] = $value['username'];
-                    if ($usersMysqlNew[$value['username']]['passwordShow'] !== self::base64($value['password']) || $usersMysqlNew[$value['username']]['quota'] != $value['quota']) {
+                    if ($usersMysqlNew[$value['username']]['passwordShow'] !== $value['passwordShow'] || $usersMysqlNew[$value['username']]['quota'] != $value['quota']) {
                         $value['id'] = $usersMysqlNew[$value['username']]['id'];
-                        self::updateUser($value); //改
+                        UsersDbHandle::updateUser($value); //改
                         $log[] = 'update: ' . json_encode($usersMysqlNew[$value['username']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' => ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     }
                 } else {
-                    self::addUser($value); //增
+                    UsersDbHandle::addUser($value); //增
                     $log[] = 'add: ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 }
             });
@@ -164,12 +237,12 @@ class UserHandle
         $userDiff = array_diff(array_keys($usersMysqlNew), $userIsset);
         if (count($userDiff) > 0) {
             array_walk($userDiff, function ($value) use ($usersMysqlNew, &$log) {
-                self::delUser($usersMysqlNew[$value]['id']); //删
+                UsersDbHandle::delUser($usersMysqlNew[$value]['id']); //删
                 $log[] = 'del: ' . json_encode($usersMysqlNew[$value], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             });
         }
 
-        self::$db->commit();
+        UsersDbHandle::commit();
 
         $this->log($log);
 
@@ -182,12 +255,7 @@ class UserHandle
      */
     public function clear()
     {
-        $sql = 'UPDATE `users` SET `download` = :download, `upload` = :upload';
-        $sth = self::$db->prepare($sql);
-        $sth->execute([
-            'download' => 0,
-            'upload' => 0,
-        ]);
+        UsersDbHandle::clear();
         $this->log(['!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!']);
     }
 
@@ -205,3 +273,5 @@ class UserHandle
     }
 
 }
+
+// (new UserHandle)->handle();
