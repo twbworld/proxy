@@ -45,14 +45,14 @@ class UserHandle
     {
         $usersData = json_decode(file_get_contents(self::$usersFile), true);
         if (!is_array($usersData)) {
-            self::log(['ERROR: 会员json数据错误']);
+            $this->log(['ERROR: 会员json数据错误']);
             exit;
         }
         $usersDataEnable = [];
         if (count($usersData) > 0) {
             array_walk($usersData, function ($value) use (&$usersDataEnable) {
                 if (!isset($value['username']) || strlen($value['username']) < 3 || strlen($value['username']) > 15 || !isset($value['password']) || strlen($value['password']) < 3 || strlen($value['password']) > 15 || !isset($value['quota']) || !isset($value['enable']) || !isset($value['level'])) {
-                    self::log(['ERROR: 会员json数据错误']);
+                    $this->log(['ERROR: 会员json数据错误']);
                     exit;
                 }
                 if ($value['enable'] === true) {
@@ -81,19 +81,6 @@ class UserHandle
     private static function hash($str)
     {
         return hash('sha224', $str);
-    }
-
-    public static function log($arr)
-    {
-        if (!is_array($arr)) {
-            $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . (string) $arr;
-            file_put_contents(self::$logFile, $log, FILE_APPEND | LOCK_EX);
-        } elseif (count($arr) > 0) {
-            array_walk($arr, function ($value) {
-                $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . $value;
-                file_put_contents(self::$logFile, $log, FILE_APPEND | LOCK_EX);
-            });
-        }
     }
 
     private static function updateUser($value)
@@ -144,7 +131,7 @@ class UserHandle
      * @author   twb<1174865138@qq.com>
      * @return   [type]                   [description]
      */
-    public static function handle()
+    public function handle()
     {
         $usersJson = self::getUsersByJson();
         $usersMysql = self::getUsersByMysql();
@@ -184,7 +171,7 @@ class UserHandle
 
         self::$db->commit();
 
-        self::log($log);
+        $this->log($log);
 
     }
 
@@ -193,7 +180,7 @@ class UserHandle
      * @dateTime 2020-11-11T23:46:04+0800
      * @author   twb<1174865138@qq.com>
      */
-    public static function clear()
+    public function clear()
     {
         $sql = 'UPDATE `users` SET `download` = :download, `upload` = :upload';
         $sth = self::$db->prepare($sql);
@@ -201,7 +188,20 @@ class UserHandle
             'download' => 0,
             'upload' => 0,
         ]);
-        self::log(['!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!']);
+        $this->log(['!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!']);
+    }
+
+    public function log($arr)
+    {
+        if (!is_array($arr)) {
+            $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . (string) $arr;
+            file_put_contents(self::$logFile, $log, FILE_APPEND | LOCK_EX);
+        } elseif (count($arr) > 0) {
+            array_walk($arr, function ($value) {
+                $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . $value;
+                file_put_contents(self::$logFile, $log, FILE_APPEND | LOCK_EX);
+            });
+        }
     }
 
 }
