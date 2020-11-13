@@ -9,7 +9,7 @@
     {
         "username": "test",
         "password": "test",
-        "quota": 50,
+        "quota": 100,
         "enable": true,
         "level": 0
     }

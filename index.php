@@ -12,6 +12,25 @@ class Proxy
     private static $vmessUrl = 'vmess://ew0KICAidiI6ICIyIiwNCiAgInBzIjogIuWklue9keS/oeaBr+Wkjeadgl/nkIbmmbrliIbovqjnnJ/lgYciLA0KICAiYWRkIjogIjQ1Ljc2LjE5NC43OSIsDQogICJwb3J0IjogIjIwODMiLA0KICAiaWQiOiAiZTY2MDk5YjAtNGZmNi00MDBhLWJhOWQtZWQzMjk2MjU0OWRjIiwNCiAgImFpZCI6ICIwIiwNCiAgIm5ldCI6ICJ0Y3AiLA0KICAidHlwZSI6ICJub25lIiwNCiAgImhvc3QiOiAiIiwNCiAgInBhdGgiOiAiIiwNCiAgInRscyI6ICIiDQp9'; #免密码链接,高等级用户使用
     private static $trojanPort = '443';
     private static $usersFile = 'users.json';
+    private static $_instance = null;
+
+    private function __construct()
+    {
+        date_default_timezone_set('Asia/Shanghai');
+    }
+
+    public function __clone()
+    {
+        exit('Clone is not allowed.' . E_USER_ERROR);
+    }
+
+    public static function getInstance()
+    {
+        if (!(self::$_instance instanceof Proxy)) {
+            self::$_instance = new Proxy();
+        }
+        return self::$_instance;
+    }
 
     /**
      * 读取json文件,所有的用户信息
@@ -34,7 +53,7 @@ class Proxy
         return $usersDataEnable;
     }
 
-    function exit() {
+    private static function exit() {
         header('HTTP/1.1 404 Not Found');
         exit();
     }
@@ -71,6 +90,4 @@ class Proxy
 
 }
 
-date_default_timezone_set('Asia/Shanghai');
-
-Proxy::response();
+(Proxy::getInstance())::response();
