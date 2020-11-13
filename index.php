@@ -58,7 +58,7 @@ class Proxy
         exit();
     }
 
-    public static function response()
+    public function response()
     {
         $user = trim($_GET['u']);
         if (empty($user) || strlen($user) < 3 || strlen($user) > 15) {
@@ -90,4 +90,4 @@ class Proxy
 
 }
 
-(Proxy::getInstance())::response();
+(Proxy::getInstance())->response();
