@@ -7,15 +7,15 @@
         "level": 1
     },
     {
-        "username": "test",
-        "password": "test",
-        "quota": 100,
+        "username": "kxl",
+        "password": "kxl",
+        "quota": -1,
         "enable": true,
-        "level": 0
+        "level": 1
     },
     {
-        "username": "test2",
-        "password": "test2",
+        "username": "test",
+        "password": "test",
         "quota": 100,
         "enable": true,
         "level": 0
