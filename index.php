@@ -8,15 +8,20 @@
 
 class Proxy
 {
-    private static $trojanDomain = 'tg.twbhub.cf';
-    private static $vmessUrl = 'vmess://ew0KICAidiI6ICIyIiwNCiAgInBzIjogIuWklue9keS/oeaBr+Wkjeadgl/nkIbmmbrliIbovqjnnJ/lgYciLA0KICAiYWRkIjogIjQ1Ljc2LjE5NC43OSIsDQogICJwb3J0IjogIjIwODMiLA0KICAiaWQiOiAiZTY2MDk5YjAtNGZmNi00MDBhLWJhOWQtZWQzMjk2MjU0OWRjIiwNCiAgImFpZCI6ICIwIiwNCiAgIm5ldCI6ICJ0Y3AiLA0KICAidHlwZSI6ICJub25lIiwNCiAgImhvc3QiOiAiIiwNCiAgInBhdGgiOiAiIiwNCiAgInRscyI6ICIiDQp9'; #免密码链接,高等级用户使用
+    private static $domain = '';
+    private static $superUrl = ''; #免密码链接,高等级用户使用
     private static $trojanPort = '443';
-    private static $usersFile = 'users.json';
+    private static $usersPath = './users.json';
     private static $_instance = null;
 
     private function __construct()
     {
         date_default_timezone_set('Asia/Shanghai');
+
+        require_once './envClass.php';
+        $env = Env::getInstance();
+        self::$superUrl = $env->get('config.superUrl');
+        self::$domain = $env->get('config.domain');
     }
 
     public function __clone()
@@ -40,7 +45,7 @@ class Proxy
      */
     private static function getUsers()
     {
-        $usersData = json_decode(file_get_contents(self::$usersFile), true);
+        $usersData = json_decode(file_get_contents(self::$usersPath), true);
         $usersDataEnable = [];
         if (count($usersData) > 0) {
             array_walk($usersData, function ($value) use (&$usersDataEnable) {
@@ -71,12 +76,11 @@ class Proxy
         if (count($usersData) > 0) {
             array_walk($usersData, function ($value) use ($user) {
                 if ($value['username'] === $user) {
-                    // trojan://trojan@tg.twbhub.cf:443?sni=tg.twbhub.cf#外网信息复杂_理智分辨真假
-                    // $subscription = 'trojan://' . $value['username'] . '@' . self::$trojanDomain . ':' . self::$trojanPort . '?sni=' . self::$trojanDomain . '#外网信息复杂_理智分辨真假'; //trojan分享链接
-                    // trojan://trojan@tg.twbhub.cf:443#外网信息复杂_理智分辨真假
-                    $subscription = 'trojan://' . $value['username'] . '@' . self::$trojanDomain . ':' . self::$trojanPort . '#外网信息复杂_理智分辨真假'; //trojan分享链接
+                    // trojan://trojan@www.domain.com:443?sni=www.domain.com#外网信息复杂_理智分辨真假
+                    // trojan://trojan@www.domain.com:443#外网信息复杂_理智分辨真假
+                    $subscription = 'trojan://' . $value['username'] . '@' . self::$domain . ':' . self::$trojanPort . '#外网信息复杂_理智分辨真假'; //trojan分享链接
                     if (isset($value['level']) && $value['level'] > 0) {
-                        $subscription .= PHP_EOL . self::$vmessUrl;
+                        $subscription .= PHP_EOL . self::$superUrl; //其他分享链接,vmess
                     }
 
                     echo base64_encode($subscription);
