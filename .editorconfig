@@ -1,18 +1,30 @@
-# editorconfig.org
+# 这文件作用: 统一团队的编码风格,需安装插件实现
+# https://editorconfig.org/
 
+# 通常建议项目最顶层的配置文件设置该值,这样才会停止继续向上查找.editorconfig文件;查找的.editorconfig文件是从顶层开始读取的,类似变量作用域的效果,内部的.editorconfig文件属性优先级更高
 root = true
 
 [*]
+# 编码格式.支持latin1/utf-8/utf-8-bom/utf-16be/utf-16le,不建议使用uft-8-bom.
 charset = utf-8
+# 定义换行符 [lf | cr | crlf]
 end_of_line = lf
-indent_size = 2
+# 设置整数用于指定替代tab的列数.默认值就是indent_size的值,一般无需指定
+tab_width = 4
+# 缩进的大小
+indent_size = 4
+# 缩进的类型 [space | tab]
 indent_style = space
+# 文件是否以一个空白行结尾 [true | false]
 insert_final_newline = true
+# 是否除去换行行首的任意空白字符
 trim_trailing_whitespace = true
+# 一行限制字数,防止单行字数过多影响阅读
+# max_line_length = 100
 
-[*.toml]
-max_line_length = 100
-
-[*.md]
+[*.{md,markdown}]
 trim_trailing_whitespace = false
 
+[*.{css,js,html,xml,xhtml,vue,json,yml,yaml,toml}]
+tab_width = 2
+indent_size = 2

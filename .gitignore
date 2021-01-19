@@ -1,9 +1,34 @@
 !.gitignore
 !.gitkeep
+!.htaccess
 
-# IDEs
+# Ide
 .idea/
-.vs/
+.project/
+.vscode/*
+.vs/*
+！
 
+# php
+vendor/
+_vendor/
+composer.lock
+composer.phar
+
+#js
+node_modules/
+yarn.lock
+package-lock.json
+
+#cache
+runtime/
+cache/
+temp/
+
+#https
+.user.ini
+.well-known/*
+
+#system
+*.log
 .env
-userHandle.log

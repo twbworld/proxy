@@ -1,4 +1,10 @@
-# 这文件作用: 制定换行符规则
+# github显示的默认语言
+
+*.vue linguist-language=js
+
+
+
+# 以下设置作用: 制定换行符规则
 
 # 文件的行尾自动转换.如果是文本文件,则在文件入Git库时,行尾自动转换为LF.如果已经在入Git库中的文件的行尾是GRLF,则文件在入Git库时,不再转换为LF.
 * text=auto
@@ -15,7 +21,11 @@
 
 # 视为二进制文件,不进行比较(git diff)
 *.sql binary
+*.db binary
 *.zip binary
+*.tar binary
+*.rar binary
+*.gz binary
 *.xlsx binary
 *.xls binary
 *.docx binary
@@ -30,14 +40,17 @@
 *.sh text eol=lf
 *.go text eol=lf
 *.md text eol=lf
+*.markdown text eol=lf
 *.py text eol=lf
 *.js text eol=lf
 *.jsx text eol=lf
 *.toml text eol=lf
-*.phtml text eol=lf
 *.json text eol=lf
 *.php text eol=lf
 *.html text eol=lf
 *.css text eol=lf
-*.volt text eol=lf
 *.vue text eol=lf
+*.xml text eol=lf
+*.xhtml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
