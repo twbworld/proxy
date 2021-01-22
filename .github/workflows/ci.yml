@@ -1,0 +1,27 @@
+name: ci
+on:
+  workflow_dispatch: #github页面手动触发
+  push: #push即触发
+    branches:
+      - master
+    paths-ignore: #不作为触发的文件
+      - '.*'
+      - 'LICENSE'
+      - 'README.md'
+      - 'users.sql'
+jobs:
+  pull-repo:
+    runs-on: ubuntu-latest #虚拟环境(github提供)
+    steps:
+      - uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd /var/www/proxy/
+            git checkout -- .
+            git checkout master
+            git fetch origin master
+            git merge origin/master
