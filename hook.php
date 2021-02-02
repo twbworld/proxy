@@ -16,7 +16,7 @@ try {
     $userHandleInfo->handle();
 
 } catch (Exception $e) {
-    $userHandleInfo->log(['ERROR: ' . $e->getMessage()]);
+    $userHandleInfo::log(['ERROR: ' . $e->getMessage()]);
     // header('HTTP/1.1 404 Not Found');
     exit('Error');
 }

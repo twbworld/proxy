@@ -167,14 +167,14 @@ class UserHandle
     {
         $usersData = json_decode(file_get_contents(self::$usersFile), true);
         if (!is_array($usersData)) {
-            $this->log(['ERROR: 会员json数据错误']);
+            self::log(['ERROR: 会员json数据错误']);
             exit;
         }
         $usersDataEnable = [];
         if (count($usersData) > 0) {
             array_walk($usersData, function ($value) use (&$usersDataEnable) {
-                if (!isset($value['username']) || strlen($value['username']) < 3 || strlen($value['username']) > 15 || !isset($value['password']) || strlen($value['password']) < 3 || strlen($value['password']) > 15 || !isset($value['quota']) || !isset($value['enable']) || !isset($value['level']) || !isset($value['expiryDate']) || strtotime(date('Y-m-d', strtotime($value['expiryDate']))) !== strtotime($value['expiryDate'])) {
-                    $this->log(['ERROR: 会员json数据错误']);
+                if (!isset($value['username']) || strlen($value['username']) < 3 || strlen($value['username']) > 15 || !isset($value['password']) || strlen($value['password']) < 3 || strlen($value['password']) > 15 || !isset($value['quota']) || !isset($value['enable']) || !isset($value['level']) || !isset($value['expiryDate']) || (!empty($value['expiryDate']) && strtotime(date('Y-m-d', strtotime($value['expiryDate']))) !== strtotime($value['expiryDate']))) {
+                    self::log(['ERROR: 会员json数据错误']);
                     exit;
                 }
                 if ($value['enable'] === true) {
@@ -248,7 +248,7 @@ class UserHandle
 
         UsersDbHandle::commit();
 
-        $this->log($log);
+        self::log($log);
 
     }
 
@@ -260,10 +260,10 @@ class UserHandle
     public function clear()
     {
         UsersDbHandle::clear();
-        $this->log(['!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!']);
+        self::log(['!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!']);
     }
 
-    public function log($arr)
+    public static function log($arr)
     {
         if (!is_array($arr)) {
             $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . (string) $arr;
