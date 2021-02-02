@@ -4,20 +4,23 @@
         "password": "twbworld",
         "quota": -1,
         "enable": true,
-        "level": 1
+        "level": 1,
+        "expiryDate": ""
     },
     {
         "username": "kxl",
         "password": "kxl",
         "quota": -1,
         "enable": true,
-        "level": 1
+        "level": 1,
+        "expiryDate": ""
     },
     {
         "username": "test",
         "password": "test",
         "quota": 100,
         "enable": true,
-        "level": 0
+        "level": 0,
+        "expiryDate": "2025-01-01"
     }
 ]

@@ -101,13 +101,15 @@ class UsersDbHandle implements Factory
     }
     public static function addUser($value)
     {
-        $sql = 'INSERT INTO `users`(`username`, `password`, `passwordShow`, `quota`, `download`, `upload`)
-                VALUES(:username, :password, :passwordShow, :quota, :download, :upload)';
+        $sql = 'INSERT INTO `users`(`username`, `password`, `passwordShow`, `quota`, `download`, `upload`, `useDays`, `expiryDate`)
+                VALUES(:username, :password, :passwordShow, :quota, :download, :upload, :useDays, :expiryDate)';
         return (Users::getInstance())->add($sql, [
             'username' => $value['username'],
             'password' => $value['password'],
             'passwordShow' => $value['passwordShow'],
             'quota' => $value['quota'] ?? -1,
+            'expiryDate' => $value['expiryDate'], //2021-02-02
+            'useDays' => 30,
             'download' => 0,
             'upload' => 0,
         ]);
@@ -125,17 +127,18 @@ class UsersDbHandle implements Factory
         $sql = 'SELECT `username` FROM `users` WHERE `id` = ' . $value['id'] . ' FOR UPDATE';
         (Users::getInstance())->select($sql);
 
-        $sql = 'UPDATE `users` SET `password` = :password, `passwordShow` = :passwordShow, `quota` = :quota WHERE `id` = :id';
+        $sql = 'UPDATE `users` SET `password` = :password, `passwordShow` = :passwordShow, `quota` = :quota, `expiryDate` = :expiryDate WHERE `id` = :id';
         return (Users::getInstance())->update($sql, [
             'id' => $value['id'],
             'password' => $value['password'],
             'passwordShow' => $value['passwordShow'],
             'quota' => $value['quota'] ?? -1,
+            'expiryDate' => $value['expiryDate']
         ]);
     }
     public static function selectUser()
     {
-        $sql = 'SELECT `id`, `username`, `passwordShow`, `quota` FROM `users`';
+        $sql = 'SELECT `id`, `username`, `passwordShow`, `quota`, `useDays`, `expiryDate` FROM `users`';
         return (Users::getInstance())->select($sql);
     }
 
@@ -170,7 +173,7 @@ class UserHandle
         $usersDataEnable = [];
         if (count($usersData) > 0) {
             array_walk($usersData, function ($value) use (&$usersDataEnable) {
-                if (!isset($value['username']) || strlen($value['username']) < 3 || strlen($value['username']) > 15 || !isset($value['password']) || strlen($value['password']) < 3 || strlen($value['password']) > 15 || !isset($value['quota']) || !isset($value['enable']) || !isset($value['level'])) {
+                if (!isset($value['username']) || strlen($value['username']) < 3 || strlen($value['username']) > 15 || !isset($value['password']) || strlen($value['password']) < 3 || strlen($value['password']) > 15 || !isset($value['quota']) || !isset($value['enable']) || !isset($value['level']) || !isset($value['expiryDate']) || strtotime(date('Y-m-d', strtotime($value['expiryDate']))) !== strtotime($value['expiryDate'])) {
                     $this->log(['ERROR: 会员json数据错误']);
                     exit;
                 }
@@ -178,6 +181,7 @@ class UserHandle
                     $value['quota'] > 0 && ($value['quota'] = $value['quota'] * self::$quotaMax);
                     $value['passwordShow'] = self::base64($value['password']);
                     $value['password'] = self::hash($value['password']);
+                    $value['expiryDate'] = trim($value['expiryDate']);
                     $usersDataEnable[] = $value;
                 }
             });
@@ -222,7 +226,7 @@ class UserHandle
             array_walk($usersJson, function ($value) use ($usersMysqlNew, &$userIsset, &$log) {
                 if (isset($usersMysqlNew[$value['username']])) {
                     $userIsset[] = $value['username'];
-                    if ($usersMysqlNew[$value['username']]['passwordShow'] !== $value['passwordShow'] || $usersMysqlNew[$value['username']]['quota'] != $value['quota']) {
+                    if ($usersMysqlNew[$value['username']]['passwordShow'] !== $value['passwordShow'] || $usersMysqlNew[$value['username']]['quota'] != $value['quota'] || $usersMysqlNew[$value['username']]['expiryDate'] != $value['expiryDate']) {
                         $value['id'] = $usersMysqlNew[$value['username']]['id'];
                         UsersDbHandle::updateUser($value); //改
                         $log[] = 'update: ' . json_encode($usersMysqlNew[$value['username']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' => ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

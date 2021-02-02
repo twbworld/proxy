@@ -30,9 +30,11 @@ CREATE TABLE `users` (
   `quota` bigint NOT NULL DEFAULT '0',
   `download` bigint unsigned NOT NULL DEFAULT '0',
   `upload` bigint unsigned NOT NULL DEFAULT '0',
+  `useDays` int DEFAULT '0',
+  `expiryDate` char(10) DEFAULT '',
   PRIMARY KEY (`id`),
   KEY `password` (`password`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

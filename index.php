@@ -8,20 +8,13 @@
 
 class Proxy
 {
-    private static $domain = '';
-    private static $superUrl = ''; #免密码链接,高等级用户使用
-    private static $trojanPort = '443';
-    private static $usersPath = './users.json';
     private static $_instance = null;
+    private static $usersPath = './users.json';
+    private static $envPath = './.env';
 
     private function __construct()
     {
         date_default_timezone_set('Asia/Shanghai');
-
-        require_once './envClass.php';
-        $env = Env::getInstance();
-        self::$superUrl = $env->get('config.superUrl');
-        self::$domain = $env->get('config.domain');
     }
 
     public function __clone()
@@ -37,15 +30,25 @@ class Proxy
         return self::$_instance;
     }
 
+    private static function loadJsonFile($path)
+    {
+        if (!file_exists($path)) {
+            throw new \Exception('配置文件' . $path . '不存在');
+        }
+        $arr = json_decode(file_get_contents($path), true);
+        return json_last_error() == JSON_ERROR_NONE ? $arr : [];
+    }
+
     /**
-     * 读取json文件,所有的用户信息
+     * 读取所有的用户信息
      * @dateTime 2020-11-07T23:36:44+0800
      * @author   twb<1174865138@qq.com>
      * @return   [type]                   [description]
      */
     private static function getUsers()
     {
-        $usersData = json_decode(file_get_contents(self::$usersPath), true);
+
+        $usersData = self::loadJsonFile(self::$usersPath);
         $usersDataEnable = [];
         if (count($usersData) > 0) {
             array_walk($usersData, function ($value) use (&$usersDataEnable) {
@@ -58,7 +61,18 @@ class Proxy
         return $usersDataEnable;
     }
 
-    private static function exit() {
+    /**
+     * 读取配置
+     * @dateTime 2020-11-07T23:36:44+0800
+     * @author   twb<1174865138@qq.com>
+     * @return   [type]                   [description]
+     */
+    private static function getEnv()
+    {
+        return self::loadJsonFile(self::$envPath);
+    }
+
+    function exit() {
         header('HTTP/1.1 404 Not Found');
         exit();
     }
@@ -73,22 +87,28 @@ class Proxy
         if (!is_array($usersData) || count($usersData) < 1) {
             self::exit();
         }
-        if (count($usersData) > 0) {
-            array_walk($usersData, function ($value) use ($user) {
-                if ($value['username'] === $user) {
-                    // trojan://trojan@www.domain.com:443?sni=www.domain.com#外网信息复杂_理智分辨真假
-                    // trojan://trojan@www.domain.com:443#外网信息复杂_理智分辨真假
-                    $subscription = 'trojan://' . $value['username'] . '@' . self::$domain . ':' . self::$trojanPort . '#外网信息复杂_理智分辨真假'; //trojan分享链接
-                    if (isset($value['level']) && $value['level'] > 0) {
-                        $subscription .= PHP_EOL . self::$superUrl; //其他分享链接,vmess
-                    }
 
-                    echo base64_encode($subscription);
-                    exit();
+        array_walk($usersData, function ($value) use ($user) {
+            if (!empty($value['username']) && $value['username'] === $user) {
+                $subscription = '';
+                $env = self::getEnv();
+                if (count($env['trojan']) > 0) {
+                    array_walk($env['trojan'], function ($val) use (&$subscription, $value) {
+                        // trojan://trojan@www.trojanDomain.com:443?sni=www.trojanDomain.com#外网信息复杂_理智分辨真假
+                        // trojan://trojan@www.trojanDomain.com:443#外网信息复杂_理智分辨真假
+                        if (!empty($val['domain'])) {
+                            $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':' . ($val['port'] ?? '443') . '#外网信息复杂_理智分辨真假' . PHP_EOL; //trojan分享链接
+                        }
+                    });
                 }
-            });
-        }
-        self::exit();
+                if (isset($value['level']) && $value['level'] > 0 && count($env['superUrl']) > 0) {
+                    $subscription .= implode(PHP_EOL, $env['superUrl']); //其他分享链接,vmess
+                }
+
+                echo base64_encode(trim($subscription, PHP_EOL));
+                exit();
+            }
+        });
 
     }
 
