@@ -3,6 +3,9 @@
 # 可使用CCI/CD执行
 # 目前使用GitHub Actions, 位于.github/workflows/cd.yml
 
+error_reporting(E_ALL ^ E_NOTICE);
+date_default_timezone_set('Asia/Shanghai');
+
 require 'userHandle.php';
 $userHandleInfo = new UserHandle;
 
