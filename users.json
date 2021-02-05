@@ -16,11 +16,11 @@
         "expiryDate": ""
     },
     {
-        "username": "test1",
-        "password": "test1",
+        "username": "abc",
+        "password": "abc",
         "quota": 100,
         "enable": true,
         "level": 0,
-        "expiryDate": "2025-01-02"
+        "expiryDate": "2021-02-28"
     }
 ]
