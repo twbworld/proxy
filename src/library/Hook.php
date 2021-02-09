@@ -6,8 +6,8 @@
 error_reporting(E_ALL ^ E_NOTICE);
 date_default_timezone_set('Asia/Shanghai');
 
-require 'userHandle.php';
-$userHandleInfo = new UserHandle;
+require __DIR__ . '/UserHandle.php';
+$userHandleInfo = new Library\UserHandle();
 
 /*$shell = 'cd /usr/share/nginx/proxy && git checkout -- . && git pull origin master 2>&1'; //使用2>&1可输出错误信息
 $str = exec($shell, $return);
@@ -17,9 +17,14 @@ exit('oooooooooook :    ' . $logStr);*/
 
 try {
     $userHandleInfo->handle();
+    if ($_ENV['phpunit'] !== '1') {
+        exit('oooooooook'. PHP_EOL);
+    }
 
 } catch (Exception $e) {
     $userHandleInfo::log(['ERROR: ' . $e->getMessage()]);
     // header('HTTP/1.1 404 Not Found');
-    exit('Error');
+    if ($_ENV['phpunit'] !== '1') {
+        exit('Error'. PHP_EOL);
+    }
 }

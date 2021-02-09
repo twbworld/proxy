@@ -7,7 +7,7 @@ on:
     types:
       - completed #requested || completed ;上一个"完成才执行下一个"
     paths: #触发文件
-      - 'users.json'
+      - 'src/data/users.json'
 jobs:
   update_users:
     runs-on: ubuntu-latest #虚拟环境(github提供)
@@ -20,4 +20,4 @@ jobs:
           key: ${{ secrets.KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            docker exec php /bin/bash -c 'cd proxy && php hook.php && exit'
+            docker exec php /bin/bash -c 'cd proxy/src/library/ && php Hook.php && exit'

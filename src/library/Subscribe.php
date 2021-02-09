@@ -6,16 +6,19 @@
  * @version 1.0
  */
 
-class Proxy
+namespace Library;
+
+class Subscribe
 {
     private static $_instance = null;
-    private static $usersPath = './users.json';
-    private static $envPath = './.env';
+    private static $usersPath = __DIR__ . '/../data/users.json';
+    private static $envPath = __DIR__ . '/../config/.env';
+
+    // @codeCoverageIgnoreStart
 
     private function __construct()
     {
-        error_reporting(E_ALL ^ E_NOTICE);
-        date_default_timezone_set('Asia/Shanghai');
+
     }
 
     public function __clone()
@@ -25,8 +28,8 @@ class Proxy
 
     public static function getInstance()
     {
-        if (!(self::$_instance instanceof Proxy)) {
-            self::$_instance = new Proxy();
+        if (!(self::$_instance instanceof Subscribe)) {
+            self::$_instance = new Subscribe();
         }
         return self::$_instance;
     }
@@ -41,12 +44,34 @@ class Proxy
     }
 
     /**
+     * 读取配置
+     * @dateTime 2020-11-07T23:36:44+0800
+     * @author   twb<1174865138@qq.com>
+     * @return   [type]                   [description]
+     */
+    private static function getEnv()
+    {
+        return self::loadJsonFile(self::$envPath);
+    }
+
+    function exit() {
+        if ($_ENV['phpunit'] === '1') {
+            throw new \Exception("出现错误");
+        } else {
+            header('HTTP/1.1 404 Not Found');
+            exit();
+        }
+    }
+
+    // @codeCoverageIgnoreEnd
+
+    /**
      * 读取所有的用户信息
      * @dateTime 2020-11-07T23:36:44+0800
      * @author   twb<1174865138@qq.com>
      * @return   [type]                   [description]
      */
-    private static function getUsers()
+    public static function getUsers()
     {
 
         $usersData = self::loadJsonFile(self::$usersPath);
@@ -62,22 +87,6 @@ class Proxy
         return $usersDataEnable;
     }
 
-    /**
-     * 读取配置
-     * @dateTime 2020-11-07T23:36:44+0800
-     * @author   twb<1174865138@qq.com>
-     * @return   [type]                   [description]
-     */
-    private static function getEnv()
-    {
-        return self::loadJsonFile(self::$envPath);
-    }
-
-    function exit() {
-        header('HTTP/1.1 404 Not Found');
-        exit();
-    }
-
     public function response()
     {
         $user = trim($_GET['u']);
@@ -89,7 +98,7 @@ class Proxy
             self::exit();
         }
 
-        array_walk($usersData, function ($value) use ($user) {
+        foreach ($usersData as $value) {
             if (!empty($value['username']) && $value['username'] === $user) {
                 $subscription = '';
                 $env = self::getEnv();
@@ -106,13 +115,13 @@ class Proxy
                     $subscription .= implode(PHP_EOL, $env['superUrl']); //其他分享链接,vmess
                 }
 
-                echo base64_encode(trim($subscription, PHP_EOL));
-                exit();
+                return base64_encode(trim($subscription, PHP_EOL));
+
             }
-        });
+        }
+
+        self::exit();
 
     }
 
 }
-
-(Proxy::getInstance())->response();

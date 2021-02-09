@@ -2,11 +2,24 @@
 !.gitkeep
 !.htaccess
 
-# Ide
+# ide
 .idea/
 .project/
-.vscode/*
-.vs/*
+.vscode/
+.vs/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+*.sw[a-p]
+modules.xml
+*.ipr
+*.iml
 ！
 
 # php
@@ -18,17 +31,50 @@ composer.phar
 #js
 node_modules/
 yarn.lock
+.yarn-integrity
 package-lock.json
+.npm
 
 #cache
 runtime/
 cache/
 temp/
 
+#log
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+#Build
+dist/
+build/
+
 #https
 .user.ini
 .well-known/*
 
 #system
-*.log
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+._*
+$RECYCLE.BIN/
+Desktop.ini
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.DS_Store
+.serverless/
+/jspm_packages
+/bower_components
+.eslintcache
 .env
+
+
+.phpunit.result.cache

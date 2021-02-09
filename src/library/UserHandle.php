@@ -1,4 +1,7 @@
 <?php
+namespace Library;
+
+// @codeCoverageIgnoreStart
 
 abstract class db
 {
@@ -72,7 +75,6 @@ class Users extends db
     }
     public function select($sql)
     {
-
         $sth = self::$db->query($sql);
         return $sth->fetchAll(\PDO::FETCH_ASSOC);
     }
@@ -153,14 +155,16 @@ class UsersDbHandle implements Factory
 
 }
 
+// @codeCoverageIgnoreEnd
+
 /**
  * 处理用户信息,对mysql数据库作处理
  */
 class UserHandle
 {
 
-    private static $usersFile = 'users.json';
-    private static $logFile = 'userHandle.log';
+    private static $usersFile = __DIR__ . '/../data/users.json';
+    private static $logFile = __DIR__ . '/../logs/userHandle.log';
     private static $quotaMax = '1073741824'; //入库需要, 1G*1024*1024*1024 = 1073741824byte
 
     private static function getUsersByJson()
@@ -261,6 +265,7 @@ class UserHandle
     {
         UsersDbHandle::clear();
         self::log(['!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!']);
+        echo '流量清零完成' . PHP_EOL;
     }
 
     public static function log($arr)
@@ -278,4 +283,4 @@ class UserHandle
 
 }
 
-// (new UserHandle)->handle();
+// (new Library/UserHandle)->handle();
