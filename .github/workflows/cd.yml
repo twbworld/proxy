@@ -10,7 +10,7 @@ on:
       - 'src/data/users.json'
 jobs:
   update_users:
-    runs-on: ubuntu-latest #虚拟环境(github提供)
+    runs-on: ubuntu-20.04 #虚拟环境(github提供)
     steps:
 
       - uses: appleboy/ssh-action@master
@@ -20,4 +20,4 @@ jobs:
           key: ${{ secrets.KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            docker exec php /bin/bash -c 'cd proxy/src/library/ && php Hook.php && exit'
+            docker exec php /bin/bash -c 'cd proxy/src/scripts/ && php Hook.php && exit'

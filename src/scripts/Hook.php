@@ -6,7 +6,7 @@
 error_reporting(E_ALL ^ E_NOTICE);
 date_default_timezone_set('Asia/Shanghai');
 
-require __DIR__ . '/UserHandle.php';
+require __DIR__ . '/../library/UserHandle.php';
 $userHandleInfo = new Library\UserHandle();
 
 /*$shell = 'cd /usr/share/nginx/proxy && git checkout -- . && git pull origin master 2>&1'; //使用2>&1可输出错误信息

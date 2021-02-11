@@ -8,6 +8,7 @@ abstract class db
     abstract public static function getInstance();
     abstract public function beginTransaction();
     abstract public function commit();
+    abstract public function rollBack();
     abstract public function add($sql, $param);
     abstract public function del($sql, $param);
     abstract public function update($sql, $param);
@@ -16,22 +17,25 @@ abstract class db
 
 class Users extends db
 {
-    private static $dbname = 'trojan';
-    private static $host = 'mysql';
-    private static $username = 'root';
-    private static $password = 'tp';
+    private static $envPath = __DIR__ . '/../config/.env';
     private static $db = null;
     private static $_instance = null;
 
     private function __construct()
     {
-        $dsn = 'mysql:dbname=' . self::$dbname . ';host=' . self::$host;
+        if (!file_exists(self::$envPath)) {
+            throw new \Exception('配置文件' . self::$envPath . '不存在');
+        }
+        $dbConfig = json_decode(file_get_contents(self::$envPath), true);
+        (json_last_error() != JSON_ERROR_NONE || !isset($dbConfig['mysqlConfig'])) && $dbConfig = [];
+
+        $dsn = 'mysql:dbname=' . $dbConfig['mysqlConfig']['dbname'] . ';host=' . $dbConfig['mysqlConfig']['host'];
 
         try {
-            self::$db = new \PDO($dsn, self::$username, self::$password);
+            self::$db = new \PDO($dsn, $dbConfig['mysqlConfig']['username'], $dbConfig['mysqlConfig']['password']);
             self::$db->exec('set names utf8');
         } catch (\PDOException $e) {
-            echo 'Connection failed: ' . $e->getMessage();
+            echo '数据库连接失败丫 : ' . $e->getMessage();
         }
     }
 
@@ -50,12 +54,17 @@ class Users extends db
 
     public function beginTransaction()
     {
-        $sth = self::$db->beginTransaction;
+        self::$db->beginTransaction();
     }
 
     public function commit()
     {
-        $sth = self::$db->commit;
+        self::$db->commit();
+    }
+
+    public function rollBack()
+    {
+        self::$db->rollBack();
     }
 
     public function add($sql, $param)
@@ -84,6 +93,7 @@ interface Factory
 {
     public static function beginTransaction();
     public static function commit();
+    public static function rollBack();
     public static function addUser($value);
     public static function delUser($id);
     public static function updateUser($value);
@@ -100,6 +110,10 @@ class UsersDbHandle implements Factory
     public static function commit()
     {
         (Users::getInstance())->commit();
+    }
+    public static function rollBack()
+    {
+        (Users::getInstance())->rollBack();
     }
     public static function addUser($value)
     {
@@ -165,21 +179,41 @@ class UserHandle
 
     private static $usersFile = __DIR__ . '/../data/users.json';
     private static $logFile = __DIR__ . '/../logs/userHandle.log';
-    private static $quotaMax = '1073741824'; //入库需要, 1G*1024*1024*1024 = 1073741824byte
+    private static $quotaMax = '1073741824'; //流量单位转换,入库需要, 1G*1024*1024*1024 = 1073741824byte
 
-    private static function getUsersByJson()
+    public function getUsersByJson()
     {
         $usersData = json_decode(file_get_contents(self::$usersFile), true);
         if (!is_array($usersData)) {
             self::log(['ERROR: 会员json数据错误']);
-            exit;
+            if ($_ENV['phpunit'] === '1') {
+                throw new \Exception('ERROR: 会员json数据错误');
+            }else{
+                exit;
+            }
         }
         $usersDataEnable = [];
-        if (count($usersData) > 0) {
+        if (is_array($usersData) && count($usersData) > 0) {
             array_walk($usersData, function ($value) use (&$usersDataEnable) {
-                if (!isset($value['username']) || strlen($value['username']) < 3 || strlen($value['username']) > 15 || !isset($value['password']) || strlen($value['password']) < 3 || strlen($value['password']) > 15 || !isset($value['quota']) || !isset($value['enable']) || !isset($value['level']) || !isset($value['expiryDate']) || (!empty($value['expiryDate']) && strtotime(date('Y-m-d', strtotime($value['expiryDate']))) !== strtotime($value['expiryDate']))) {
+                if (
+                    !isset($value['username'])
+                    || strlen($value['username']) < 3
+                    || strlen($value['username']) > 15
+                    || !isset($value['password'])
+                    || strlen($value['password']) < 3
+                    || strlen($value['password']) > 15
+                    || !isset($value['quota'])
+                    || !isset($value['enable'])
+                    || !isset($value['level'])
+                    || !isset($value['expiryDate'])
+                    || (!empty($value['expiryDate']) && strtotime(date('Y-m-d', strtotime($value['expiryDate']))) !== strtotime($value['expiryDate']))
+                ) {
                     self::log(['ERROR: 会员json数据错误']);
-                    exit;
+                    if ($_ENV['phpunit'] === '1') {
+                        throw new \Exception('ERROR: 会员json数据错误');
+                    }else{
+                        exit;
+                    }
                 }
                 if ($value['enable'] === true) {
                     $value['quota'] > 0 && ($value['quota'] = $value['quota'] * self::$quotaMax);
@@ -194,6 +228,8 @@ class UserHandle
         return $usersDataEnable;
     }
 
+    // @codeCoverageIgnoreStart
+
     private static function base64($str)
     {
         return base64_encode($str);
@@ -203,6 +239,8 @@ class UserHandle
     {
         return hash('sha224', $str);
     }
+
+    // @codeCoverageIgnoreEnd
 
     /**
      * 更新用户表
@@ -214,45 +252,65 @@ class UserHandle
     {
         date_default_timezone_set('Asia/Shanghai');
 
-        $usersJson = self::getUsersByJson();
+        $usersJson = $this->getUsersByJson();
         $usersMysql = UsersDbHandle::selectUser();
         $usersMysqlNew = $userIsset = $log = [];
 
-        if (count($usersMysql) > 0) {
+        if (is_array($usersMysql) && count($usersMysql) > 0) {
             array_walk($usersMysql, function ($value) use (&$usersMysqlNew) {
                 $usersMysqlNew[$value['username']] = $value;
             });
         }
 
-        UsersDbHandle::beginTransaction();
 
-        if (count($usersJson) > 0) {
-            array_walk($usersJson, function ($value) use ($usersMysqlNew, &$userIsset, &$log) {
-                if (isset($usersMysqlNew[$value['username']])) {
-                    $userIsset[] = $value['username'];
-                    if ($usersMysqlNew[$value['username']]['passwordShow'] !== $value['passwordShow'] || $usersMysqlNew[$value['username']]['quota'] != $value['quota'] || $usersMysqlNew[$value['username']]['expiryDate'] != $value['expiryDate']) {
-                        $value['id'] = $usersMysqlNew[$value['username']]['id'];
-                        UsersDbHandle::updateUser($value); //改
-                        $log[] = 'update: ' . json_encode($usersMysqlNew[$value['username']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' => ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        try {
+
+            UsersDbHandle::beginTransaction();
+
+            if (is_array($usersJson) && count($usersJson) > 0) {
+                array_walk($usersJson, function ($value) use ($usersMysqlNew, &$userIsset, &$log) {
+                    if (isset($usersMysqlNew[$value['username']])) {
+                        $userIsset[] = $value['username'];
+                        if ($usersMysqlNew[$value['username']]['passwordShow'] !== $value['passwordShow'] || $usersMysqlNew[$value['username']]['quota'] != $value['quota'] || $usersMysqlNew[$value['username']]['expiryDate'] != $value['expiryDate']) {
+                            $value['id'] = $usersMysqlNew[$value['username']]['id'];
+                            UsersDbHandle::updateUser($value); //改
+                            $log[] = 'update: ' . json_encode($usersMysqlNew[$value['username']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' => ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                        }
+                    } else {
+                        UsersDbHandle::addUser($value); //增
+                        $log[] = 'add: ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     }
-                } else {
-                    UsersDbHandle::addUser($value); //增
-                    $log[] = 'add: ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                }
-            });
+                });
+            }
+
+            $userDiff = array_diff(array_keys($usersMysqlNew), $userIsset);
+            if (is_array($userDiff) && count($userDiff) > 0) {
+                array_walk($userDiff, function ($value) use ($usersMysqlNew, &$log) {
+                    UsersDbHandle::delUser($usersMysqlNew[$value]['id']); //删
+                    $log[] = 'del: ' . json_encode($usersMysqlNew[$value], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                });
+            }
+
+            UsersDbHandle::commit();
+
+        // @codeCoverageIgnoreStart
+
+        } catch (Exception $e) {
+            UsersDbHandle::rollBack();
+            $err = 'Error: 数据库操作回滚;detail: ' . $e->getMessage();
+            $log[] = $err;
+            if ($_ENV['phpunit'] === '1') {
+                throw new \Exception($err);
+            }
         }
 
-        $userDiff = array_diff(array_keys($usersMysqlNew), $userIsset);
-        if (count($userDiff) > 0) {
-            array_walk($userDiff, function ($value) use ($usersMysqlNew, &$log) {
-                UsersDbHandle::delUser($usersMysqlNew[$value]['id']); //删
-                $log[] = 'del: ' . json_encode($usersMysqlNew[$value], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            });
-        }
-
-        UsersDbHandle::commit();
+        // @codeCoverageIgnoreEnd
 
         self::log($log);
+
+        if ($_ENV['phpunit'] === '1') {
+            return $log;
+        }
 
     }
 
@@ -263,22 +321,54 @@ class UserHandle
      */
     public function clear()
     {
-        UsersDbHandle::clear();
-        self::log(['!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!']);
+        try {
+            UsersDbHandle::clear();
+            $log[] = '!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!';
+
+        // @codeCoverageIgnoreStart
+
+        }catch (Exception $e) {
+            $err = 'Error: 出现错误;detail: ' . $e->getMessage();
+            $log[] = $err;
+            if ($_ENV['phpunit'] === '1') {
+                throw new \Exception($err);
+            }
+        }
+
+        // @codeCoverageIgnoreEnd
+
+        self::log($log);
         echo '流量清零完成' . PHP_EOL;
     }
 
     public static function log($arr)
     {
-        if (!is_array($arr)) {
-            $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . (string) $arr;
-            file_put_contents(self::$logFile, $log, FILE_APPEND | LOCK_EX);
-        } elseif (count($arr) > 0) {
-            array_walk($arr, function ($value) {
-                $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . $value;
+        try {
+            if (!is_array($arr)) {
+                $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . (string) $arr;
                 file_put_contents(self::$logFile, $log, FILE_APPEND | LOCK_EX);
-            });
+                return true;
+            } elseif (count($arr) > 0) {
+                array_walk($arr, function ($value) {
+                    $log = PHP_EOL . date('Y-m-d H:i:s', time()) . '   ' . $value;
+                    file_put_contents(self::$logFile, $log, FILE_APPEND | LOCK_EX);
+                });
+                return true;
+            }
+            return false;
+
+        // @codeCoverageIgnoreStart
+
+        }catch (Exception $e) {
+            $err = 'Error: 出现错误;detail: ' . $e->getMessage();
+            $log[] = $err;
+            if ($_ENV['phpunit'] === '1') {
+                throw new \Exception($err);
+            }
         }
+
+        // @codeCoverageIgnoreEnd
+
     }
 
 }

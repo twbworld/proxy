@@ -43,17 +43,6 @@ class Subscribe
         return json_last_error() == JSON_ERROR_NONE ? $arr : [];
     }
 
-    /**
-     * 读取配置
-     * @dateTime 2020-11-07T23:36:44+0800
-     * @author   twb<1174865138@qq.com>
-     * @return   [type]                   [description]
-     */
-    private static function getEnv()
-    {
-        return self::loadJsonFile(self::$envPath);
-    }
-
     function exit() {
         if ($_ENV['phpunit'] === '1') {
             throw new \Exception("出现错误");
@@ -76,7 +65,7 @@ class Subscribe
 
         $usersData = self::loadJsonFile(self::$usersPath);
         $usersDataEnable = [];
-        if (count($usersData) > 0) {
+        if (is_array($usersData) && count($usersData) > 0) {
             array_walk($usersData, function ($value) use (&$usersDataEnable) {
                 if ($value['enable'] === true) {
                     $usersDataEnable[] = $value;
@@ -101,8 +90,8 @@ class Subscribe
         foreach ($usersData as $value) {
             if (!empty($value['username']) && $value['username'] === $user) {
                 $subscription = '';
-                $env = self::getEnv();
-                if (count($env['trojan']) > 0) {
+                $env = self::loadJsonFile(self::$envPath);
+                if (is_array($env['trojan']) && count($env['trojan']) > 0) {
                     array_walk($env['trojan'], function ($val) use (&$subscription, $value) {
                         // trojan://trojan@www.trojanDomain.com:443?sni=www.trojanDomain.com#外网信息复杂_理智分辨真假
                         // trojan://trojan@www.trojanDomain.com:443#外网信息复杂_理智分辨真假
@@ -111,7 +100,7 @@ class Subscribe
                         }
                     });
                 }
-                if (isset($value['level']) && $value['level'] > 0 && count($env['superUrl']) > 0) {
+                if (isset($value['level']) && $value['level'] > 0 && is_array($env['superUrl']) && count($env['superUrl']) > 0) {
                     $subscription .= implode(PHP_EOL, $env['superUrl']); //其他分享链接,vmess
                 }
 
