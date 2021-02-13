@@ -26,13 +26,16 @@ jobs:
         run: |
           sudo ln -sf /bin/php7.4 /bin/php
           sudo ln -sf /usr/bin/php7.4 /usr/bin/php
-      - name: phpunit-config
-        run: |
-          sudo echo 'export XDEBUG_MODE=coverage' >> ~/.profile
-          source ~/.profile
-          XDEBUG_MODE=coverage
       - name: phpunit-test
-        run: sudo ./vendor/bin/phpunit
+        run: sudo XDEBUG_MODE=coverage ./vendor/bin/phpunit #如果不设置XDEBUG_MODE,coverage.xml文件会导不出
+      - name: Up-Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          file: ./tests/report/coverage.xml
+          directory: ./tests/report/
+          fail_ci_if_error: true #出错暂停
+          verbose: true #列出详情
       # - uses: php-actions/phpunit@v2
       #   with:
       #     configuration: ./phpunit.xml

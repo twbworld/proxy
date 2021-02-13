@@ -16,16 +16,19 @@
     </testsuites>
     <coverage processUncoveredFiles="true">
         <report>
-            <html outputDirectory="../phalcon_shop/public/report/" lowUpperBound="50" highLowerBound="90" />
+            <!-- 视觉化报告 -->
+            <clover outputFile="./tests/report/coverage.xml" /><!-- 上传到Codecov -->
+            <html outputDirectory="./tests/report/" lowUpperBound="50" highLowerBound="90" />
+            <!-- <html outputDirectory="../phalcon_shop/public/report/" lowUpperBound="50" highLowerBound="90" /> -->
         </report>
         <include>
             <directory suffix=".php">src/library/</directory>
         </include>
     </coverage>
     <logging>
-        <testdoxHtml outputFile="../phalcon_shop/public/report/report.html" />
+        <junit outputFile="./tests/report/logging.xml" />
     </logging>
     <php>
-      <env name="phpunit" value="1"/>
+      <env name="phpunit" value="1"/><!-- php环境变量$_ENV['phpunit'] -->
     </php>
 </phpunit>
