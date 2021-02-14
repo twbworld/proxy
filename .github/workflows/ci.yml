@@ -21,7 +21,7 @@ jobs:
       - name: save-data
         run: sudo mysql -uroot -proot trojan < src/data/users.sql
       - name: add-envFile
-        run: sudo echo '{"superUrl":["vmess://ew0KICAidiI6ICIyIiwNCiAgInBzIjogIuWklue9keS/oeaBr+Wkjeadgl/nkIbmmbrliIbovqjnnJ/lgYciLA0KICAiYWRkIjogInZtLnR3Ymh1Yi5jZiIsDQogICJwb3J0IjogIjQ0MyIsDQogICJpZCI6ICIxZmNmY2Y1Ni0yMjVlLTRjNjQtYjFmMi1lYzFlN2IzNDI0MDUiLA0KICAiYWlkIjogIjAiLA0KICAibmV0IjogIndzIiwNCiAgInR5cGUiOiAibm9uZSIsDQogICJob3N0IjogInZtLnR3Ymh1Yi5jZiIsDQogICJwYXRoIjogIi92bWVzcy13cyIsDQogICJ0bHMiOiAidGxzIg0KfQ=="],"trojan":[{"domain":"trg.twbhub.cf","port":"443"}],"mysqlConfig":{"dbname":"trojan","host":"localhost","username":"root","password":"root"}}' > src/config/.env
+        run: sudo echo '${{secrets.TEST_ENV}}' > src/config/.env
       - name: ln-php7.4 #该ubuntu-20.04自带php8.0/7.4,php命令默认8.0,这里ln成7.4的
         run: |
           sudo ln -sf /bin/php7.4 /bin/php

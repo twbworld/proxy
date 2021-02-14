@@ -1,0 +1,19 @@
+name: cron
+on:
+  workflow_dispatch: #github页面手动触发
+  schedule:
+    - cron: '0 0 1 * *' #每月1号0点执行
+jobs:
+  update_users:
+    runs-on: ubuntu-20.04 #虚拟环境(github提供)
+    steps:
+
+      - uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            docker exec php /bin/bash -c 'cd proxy/src/scripts/ && chmod +x * && ./task.sh && exit'
+

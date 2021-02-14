@@ -2,8 +2,10 @@ name: cd
 on:
   workflow_dispatch: #github页面手动触发
   workflow_run: #workflow执行顺序,当前文件最后执行;必须为默认分支,否则不会触发,好奇怪
-    workflows: ["ci"]
-    branches: [master]
+    workflows:
+      - ci
+    branches:
+      - master
     types:
       - completed #requested || completed ;上一个"完成才执行下一个"
     paths: #触发文件
@@ -20,4 +22,4 @@ jobs:
           key: ${{ secrets.KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            docker exec php /bin/bash -c 'cd proxy/src/scripts/ && php Hook.php && exit'
+            docker exec php /bin/bash -c 'cd proxy/src/scripts/ && chmod +x * && php Hook.php && exit'
