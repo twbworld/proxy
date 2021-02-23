@@ -12,13 +12,13 @@
 翻墙代理服务器的订阅和用户管理 控制代码 ; 可作为订阅服务器 , 以及 , 通过 `GitHub-Actions` 作为 `持续集成` , 自动化更新数据库(安装 ***`Jrohy/trojan`*** 作为前提)
 > 推荐在Docker内使用
 
-#### 准备
+### 准备
 基于 [Jrohy/trojan](https://github.com/Jrohy/trojan) 控制面板, 首先进行安装
 ```
 $ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/trojan-install" && chmod +x install_trojan_go.sh && ./install_trojan_go.sh
 ```
 
-#### 目录结构 : 
+### 目录结构 : 
 ``` sh
 ├── phpunit.xml              #单元测试配置
 ├── tests/                   #单元测试目录
@@ -41,11 +41,11 @@ $ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/troj
          ├── Hook.php        #同步users.json到数据库
          └── task.sh         #清除流量上下行记录; 用于crontab或者 `GitHub-Actions`定时实现
 ```
-#### 使用
+### 使用
 利用 `GitHub-Actions` 作为 `持续集成` , 位于 `.github/workflows` 下 , 可以作为参考
 
 
-#### 单元测试(如有需要)
+### 单元测试(如有需要)
 
 使用 `PHPunit` 工具, 首先 `composer` 安装依赖
 ``` sh
