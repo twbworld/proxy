@@ -16,14 +16,6 @@
         "expiryDate": ""
     },
     {
-        "username": "abc",
-        "password": "abc",
-        "quota": 100,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2021-02-28"
-    },
-    {
         "username": "ighfdgu",
         "password": "ighfdgu",
         "quota": 100,

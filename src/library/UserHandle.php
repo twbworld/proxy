@@ -125,7 +125,7 @@ class UsersDbHandle implements Factory
             'passwordShow' => $value['passwordShow'],
             'quota' => $value['quota'] ?? -1,
             'expiryDate' => $value['expiryDate'], //2021-02-02
-            'useDays' => 30,
+            'useDays' => $value['useDays'], //天数,0为无限制
             'download' => 0,
             'upload' => 0,
         ]);
@@ -143,13 +143,14 @@ class UsersDbHandle implements Factory
         $sql = 'SELECT `username` FROM `users` WHERE `id` = ' . $value['id'] . ' FOR UPDATE';
         (Users::getInstance())->select($sql);
 
-        $sql = 'UPDATE `users` SET `password` = :password, `passwordShow` = :passwordShow, `quota` = :quota, `expiryDate` = :expiryDate WHERE `id` = :id';
+        $sql = 'UPDATE `users` SET `password` = :password, `passwordShow` = :passwordShow, `quota` = :quota, `useDays` = :useDays, `expiryDate` = :expiryDate WHERE `id` = :id';
         return (Users::getInstance())->update($sql, [
             'id' => $value['id'],
             'password' => $value['password'],
             'passwordShow' => $value['passwordShow'],
             'quota' => $value['quota'] ?? -1,
-            'expiryDate' => $value['expiryDate']
+            'expiryDate' => $value['expiryDate'],
+            'useDays' => $value['useDays']
         ]);
     }
     public static function selectUser()
@@ -258,6 +259,7 @@ class UserHandle
 
         if (is_array($usersMysql) && count($usersMysql) > 0) {
             array_walk($usersMysql, function ($value) use (&$usersMysqlNew) {
+                $value['useDays'] = $value['level'] > 0 ? 0 : 30;
                 $usersMysqlNew[$value['username']] = $value;
             });
         }
@@ -271,7 +273,12 @@ class UserHandle
                 array_walk($usersJson, function ($value) use ($usersMysqlNew, &$userIsset, &$log) {
                     if (isset($usersMysqlNew[$value['username']])) {
                         $userIsset[] = $value['username'];
-                        if ($usersMysqlNew[$value['username']]['passwordShow'] !== $value['passwordShow'] || $usersMysqlNew[$value['username']]['quota'] != $value['quota'] || $usersMysqlNew[$value['username']]['expiryDate'] != $value['expiryDate']) {
+                        if (
+                            $usersMysqlNew[$value['username']]['passwordShow'] !== $value['passwordShow']
+                            || $usersMysqlNew[$value['username']]['quota'] != $value['quota']
+                            || $usersMysqlNew[$value['username']]['useDays'] != $value['useDays']
+                            || $usersMysqlNew[$value['username']]['expiryDate'] != $value['expiryDate']
+                        ) {
                             $value['id'] = $usersMysqlNew[$value['username']]['id'];
                             UsersDbHandle::updateUser($value); //改
                             $log[] = 'update: ' . json_encode($usersMysqlNew[$value['username']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ' => ' . json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
