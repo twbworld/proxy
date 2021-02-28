@@ -259,7 +259,6 @@ class UserHandle
 
         if (is_array($usersMysql) && count($usersMysql) > 0) {
             array_walk($usersMysql, function ($value) use (&$usersMysqlNew) {
-                $value['useDays'] = $value['level'] > 0 ? 0 : 30;
                 $usersMysqlNew[$value['username']] = $value;
             });
         }
@@ -271,6 +270,7 @@ class UserHandle
 
             if (is_array($usersJson) && count($usersJson) > 0) {
                 array_walk($usersJson, function ($value) use ($usersMysqlNew, &$userIsset, &$log) {
+                    $value['useDays'] = $value['level'] > 0 ? 0 : 30;
                     if (isset($usersMysqlNew[$value['username']])) {
                         $userIsset[] = $value['username'];
                         if (
