@@ -23,3 +23,4 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             docker exec php /bin/bash -c 'cd proxy/src/scripts/ && chmod +x * && php Hook.php && exit'
+            docker exec trojan-go /bin/bash -c 'systemctl restart trojan && exit'
