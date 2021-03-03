@@ -13,6 +13,8 @@ on:
 jobs:
   update_users:
     runs-on: ubuntu-20.04 #虚拟环境(github提供)
+    env:
+      TZ: Asia/Shanghai
     steps:
 
       - uses: appleboy/ssh-action@master

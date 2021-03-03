@@ -11,6 +11,8 @@ on:
 jobs:
   unit-test:
     runs-on: ubuntu-20.04 #虚拟环境(github提供)
+    env:
+      TZ: Asia/Shanghai
     steps:
       - uses: actions/checkout@v2
       - uses: php-actions/composer@v5

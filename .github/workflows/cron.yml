@@ -2,12 +2,12 @@ name: cron
 on:
   workflow_dispatch: #github页面手动触发
   schedule:
-    - cron: '0 20 * * *' #每月1号0点执行,注意,这是UTC时间,比北京时间晚8个小时
-env:
-  TZ: Asia/Shanghai
+    - cron: '0 0 1 * *' #每月1号0点执行,注意,这是UTC时间,比北京时间晚8个小时
 jobs:
   update_users:
     runs-on: ubuntu-20.04 #虚拟环境(github提供)
+    env:
+      TZ: Asia/Shanghai
     steps:
 
       - uses: appleboy/ssh-action@master
