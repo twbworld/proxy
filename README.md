@@ -22,6 +22,8 @@ $ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/troj
 ``` sh
 ├── phpunit.xml              #单元测试配置
 ├── tests/                   #单元测试目录
+├── .github/
+│    └── workflows/          #存放GitHub-Actions的工作流文件
 ├── src/
      ├── config/
      │   ├── .env            #配置文件,数据库啥的
@@ -36,10 +38,11 @@ $ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/troj
      │   ├── .gitkeep
      │   └── userHandle.log
      ├── public/
-     │   └── index.php       #订阅入口
+     │   └── index.php        #订阅入口
      └── scripts/
-         ├── Hook.php        #同步users.json到数据库
-         └── task.sh         #清除流量上下行记录; 用于crontab或者 `GitHub-Actions`定时实现
+         ├── handle.php       #同步users.json到数据库
+         ├── clear.sh         #清除流量上下行记录; 用于 `GitHub-Actions`定时实现
+         └── expiry.sh        #处理过期用户; 用于 `GitHub-Actions`定时实现
 ```
 ### 使用
 利用 `GitHub-Actions` 作为 `持续集成` , 位于 `.github/workflows` 下 , 可以作为参考

@@ -13,6 +13,7 @@ class UserHandleTest extends TestCase
 
     protected function setUp(): void
     {
+        date_default_timezone_set('Asia/Shanghai');
         $this->object = new UserHandle();
     }
 
@@ -110,7 +111,7 @@ class UserHandleTest extends TestCase
                         "quota" => 107374182400,
                         "enable" => true,
                         "level" => 0,
-                        "expiryDate" => "2050-01-02",
+                        "expiryDate" => date("Y-m-d"), //便于expiry方法使用
                         "passwordShow" => "dGVzdA==",
                     ],
                 ],

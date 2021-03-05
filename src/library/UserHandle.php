@@ -13,6 +13,7 @@ abstract class db
     abstract public function del($sql, $param);
     abstract public function update($sql, $param);
     abstract public function select($sql);
+    abstract public function expiry($sql);
 }
 
 class Users extends db
@@ -87,6 +88,11 @@ class Users extends db
         $sth = self::$db->query($sql);
         return $sth->fetchAll(\PDO::FETCH_ASSOC);
     }
+    public function expiry($sql)
+    {
+        $sth = self::$db->prepare($sql);
+        return $sth->execute($param);
+    }
 }
 
 interface Factory
@@ -97,8 +103,9 @@ interface Factory
     public static function addUser($value);
     public static function delUser($id);
     public static function updateUser($value);
-    public static function selectUser();
+    public static function selectUser($where);
     public static function clear();
+    public static function expiry($id);
 }
 
 class UsersDbHandle implements Factory
@@ -153,9 +160,10 @@ class UsersDbHandle implements Factory
             'useDays' => $value['useDays']
         ]);
     }
-    public static function selectUser()
+    public static function selectUser($where = '')
     {
         $sql = 'SELECT `id`, `username`, `passwordShow`, `quota`, `useDays`, `expiryDate` FROM `users`';
+        !empty($where) && $sql .= ' WHERE ' . trim($where);
         return (Users::getInstance())->select($sql);
     }
 
@@ -165,6 +173,14 @@ class UsersDbHandle implements Factory
         return (Users::getInstance())->update($sql, [
             'download' => 0,
             'upload' => 0,
+        ]);
+    }
+
+    public static function expiry($id)
+    {
+        $sql = 'UPDATE `users` SET `quota` = 0 WHERE `id` = :id';
+        return (Users::getInstance())->update($sql, [
+            'id' => $id
         ]);
     }
 
@@ -300,6 +316,8 @@ class UserHandle
 
             UsersDbHandle::commit();
 
+            $this->expiry();
+
         // @codeCoverageIgnoreStart
 
         } catch (Exception $e) {
@@ -328,13 +346,16 @@ class UserHandle
      */
     public function clear()
     {
+        UsersDbHandle::beginTransaction();
         try {
             UsersDbHandle::clear();
+            UsersDbHandle::commit();
             $log[] = '!!!!!!!!!!!!!!!!!!!!! Clear: 流量清零 !!!!!!!!!!!!!!!!!!!!!!';
 
         // @codeCoverageIgnoreStart
 
         }catch (Exception $e) {
+            UsersDbHandle::rollBack();
             $err = 'Error: 出现错误;detail: ' . $e->getMessage();
             $log[] = $err;
             if ($_ENV['phpunit'] === '1') {
@@ -346,6 +367,49 @@ class UserHandle
 
         self::log($log);
         echo '流量清零完成' . PHP_EOL;
+    }
+
+    /**
+     * 处理过期用户
+     * @dateTime 2021-03-05T16:35:25+0800
+     * @author   twb<1174865138@qq.com>
+     * @return   [type]                   [description]
+     */
+    public function expiry()
+    {
+        // $date = date("Y-m-d",strtotime("-1 day"));
+        $date = date("Y-m-d");
+        $usersMysql = UsersDbHandle::selectUser('`quota` != 0 AND `useDays` != 0 AND `expiryDate` = "' . $date . '"');
+        if (!is_array($usersMysql) || count($usersMysql) < 1) {
+            return true;
+        }
+
+        try {
+            UsersDbHandle::beginTransaction();
+            $users = '';
+            array_walk($usersMysql, function($value) use(&$users){
+                UsersDbHandle::expiry($value['id']);
+                $users .= '[' . $value['id'] . ']' . $value['username'];
+            });
+
+            UsersDbHandle::commit();
+            $log[] = '过期用户处理: ' . $users;
+
+        // @codeCoverageIgnoreStart
+
+        }catch (Exception $e) {
+            UsersDbHandle::rollBack();
+            $err = 'Error: 出现错误;detail: ' . $e->getMessage();
+            $log[] = $err;
+            if ($_ENV['phpunit'] === '1') {
+                throw new \Exception($err);
+            }
+        }
+
+        // @codeCoverageIgnoreEnd
+
+        self::log($log);
+        echo '过期用户处理完成' . PHP_EOL;
     }
 
     public static function log($arr)
