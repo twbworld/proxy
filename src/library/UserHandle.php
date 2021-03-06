@@ -399,7 +399,8 @@ class UserHandle
             });
 
             UsersDbHandle::commit();
-            $log[] = '过期用户处理: ' . $users;
+
+            $log[] = $users === '' ? '没有过期用户' : '过期用户处理: ' . $users;
 
         // @codeCoverageIgnoreStart
 

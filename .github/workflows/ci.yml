@@ -84,5 +84,5 @@ jobs:
           key: ${{ secrets.KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            docker exec php /bin/bash -c 'cd proxy/src/scripts/ && chmod +x * && php handle.php && exit'
+            docker exec php /bin/bash -c 'cd proxy/src/scripts/ && chmod +x * && php bash.php handle && exit'
             docker exec trojan-go /bin/bash -c 'systemctl restart trojan && exit'
