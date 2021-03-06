@@ -30,21 +30,5 @@
         "enable": true,
         "level": 0,
         "expiryDate": "2021-05-01"
-    },
-    {
-        "username": "aaa",
-        "password": "aaa",
-        "quota": 50,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2021-03-06"
-    },
-    {
-        "username": "bbb",
-        "password": "bbb",
-        "quota": 50,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2021-03-05"
     }
 ]

@@ -201,16 +201,15 @@ class UserHandle
     public function getUsersByJson()
     {
         $usersData = json_decode(file_get_contents(self::$usersFile), true);
-        if (!is_array($usersData)) {
+        if (json_last_error() != JSON_ERROR_NONE || !is_array($usersData)) {
             self::log(['ERROR: 会员json数据错误']);
-            if ($_ENV['phpunit'] === '1') {
-                throw new \Exception('ERROR: 会员json数据错误');
-            }else{
+            throw new \Exception('ERROR: 会员json数据错误');
+            if ($_ENV['phpunit'] !== '1') {
                 exit;
             }
         }
         $usersDataEnable = [];
-        if (is_array($usersData) && count($usersData) > 0) {
+        if (count($usersData) > 0) {
             array_walk($usersData, function ($value) use (&$usersDataEnable) {
                 if (
                     !isset($value['username'])
@@ -377,19 +376,26 @@ class UserHandle
      */
     public function expiry()
     {
-        // $date = date("Y-m-d",strtotime("-1 day"));
-        $date = date("Y-m-d");
-        $usersMysql = UsersDbHandle::selectUser('`quota` != 0 AND `useDays` != 0 AND `expiryDate` = "' . $date . '"');
+        $usersMysql = UsersDbHandle::selectUser('`quota` != 0 AND `useDays` != 0');
         if (!is_array($usersMysql) || count($usersMysql) < 1) {
             return true;
         }
 
+        //date("Y-m-d",strtotime("-1 day"));
+        $date = strtotime(date("Y-m-d")) + 1; //当前日期时间戳
         try {
             UsersDbHandle::beginTransaction();
             $users = '';
-            array_walk($usersMysql, function($value) use(&$users){
-                UsersDbHandle::expiry($value['id']);
-                $users .= '[' . $value['id'] . ']' . $value['username'];
+            array_walk($usersMysql, function($value) use(&$users, $date){
+                if (
+                    (int) $value['id'] > 0
+                    && isset($value['expiryDate'])
+                    && !empty($value['expiryDate'])
+                    && strtotime(trim($value['expiryDate'])) < $date
+                ) {
+                    UsersDbHandle::expiry($value['id']);
+                    $users .= '[' . $value['id'] . ']' . $value['username'];
+                }
             });
 
             UsersDbHandle::commit();
