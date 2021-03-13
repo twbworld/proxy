@@ -79,7 +79,7 @@ class Subscribe
     public function response()
     {
         $user = trim($_GET['u']);
-        if (empty($user) || strlen($user) < 3 || strlen($user) > 15) {
+        if (empty($user) || strlen($user) < 3 || strlen($user) > 50) {
             self::exit();
         }
         $usersData = self::getUsers();
