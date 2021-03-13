@@ -214,10 +214,10 @@ class UserHandle
                 if (
                     !isset($value['username'])
                     || strlen($value['username']) < 3
-                    || strlen($value['username']) > 15
+                    || strlen($value['username']) > 50
                     || !isset($value['password'])
                     || strlen($value['password']) < 3
-                    || strlen($value['password']) > 15
+                    || strlen($value['password']) > 50
                     || !isset($value['quota'])
                     || !isset($value['enable'])
                     || !isset($value['level'])
