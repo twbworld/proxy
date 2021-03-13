@@ -30,5 +30,13 @@
         "enable": true,
         "level": 0,
         "expiryDate": "2021-05-01"
+    },
+    {
+        "username": "210313_tylor_singer",
+        "password": "210313_tylor_singer",
+        "quota": 50,
+        "enable": true,
+        "level": 0,
+        "expiryDate": "2021-05-01"
     }
 ]
