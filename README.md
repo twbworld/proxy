@@ -39,9 +39,7 @@ $ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/troj
      ├── public/
      │   └── index.php        #订阅入口
      └── scripts/
-         ├── handle.php       #同步users.json到数据库
-         ├── clear.sh         #清除流量上下行记录; 用于 `GitHub-Actions`定时实现
-         └── expiry.sh        #处理过期用户; 用于 `GitHub-Actions`定时实现
+         └── bash.php       #脚本入口
 ```
 ### 使用
 利用 `GitHub-Actions` 作为 `持续集成` , 位于 `.github/workflows` 下 , 可以作为参考
