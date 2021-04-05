@@ -1,6 +1,7 @@
 
 **Proxy**
 ===========
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/c289ea6b840d494bab60fc09fa2ff114)](https://app.codacy.com/gh/twbworld/proxy?utm_source=github.com&utm_medium=referral&utm_content=twbworld/proxy&utm_campaign=Badge_Grade_Settings)
 [![](https://github.com/twbworld/proxy/workflows/ci/badge.svg?branch=master)](https://github.com/twbworld/proxy/actions)
 [![](https://img.shields.io/github/tag/twbworld/proxy?logo=github)](https://github.com/twbworld/proxy)
 ![](https://img.shields.io/badge/language-PHP-orange)
