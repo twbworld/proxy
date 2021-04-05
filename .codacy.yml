@@ -1,0 +1,9 @@
+---
+engines:
+  phpcs:
+    php_version: 7.3
+exclude_paths:
+  - "vendor/**"
+  - "tests/report/**"
+  - "src/logs/**"
+  - "src/config/**"

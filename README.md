@@ -6,6 +6,8 @@
 ![](https://img.shields.io/badge/language-PHP-orange)
 [![](https://img.shields.io/github/license/twbworld/proxy)](https://github.com/twbworld/proxy/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/twbworld/proxy/branch/master/graph/badge.svg?token=08N3AJSVCR)](https://codecov.io/gh/twbworld/proxy)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/d6a59fd45f234d8aab947e5be874f5cd?branch=master)](https://www.codacy.com/gh/twbworld/test/dashboard?utm_source=github.com&utm_medium=referral&utm_content=twbworld/proxy&utm_campaign=Badge_Coverage)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/d6a59fd45f234d8aab947e5be874f5cd)](https://www.codacy.com/gh/twbworld/proxy/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=twbworld/proxy&amp;utm_campaign=Badge_Grade)
 
 ### 简介
 翻墙代理服务器的订阅和用户管理 控制代码 ; 可作为订阅服务器 , 以及 , 通过 `GitHub-Actions` 作为 `持续集成` , 自动化更新数据库(安装 ***`Jrohy/trojan`*** 作为前提)

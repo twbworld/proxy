@@ -8,6 +8,13 @@ on:
       - '.*'
       - 'LICENSE'
       - 'README.md'
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - '.*'
+      - 'LICENSE'
+      - 'README.md'
   # workflow_run: #workflow执行顺序,当前文件最后执行;必须为默认分支,否则不会触发,好奇怪
   #   workflows:
   #     - ci
@@ -43,20 +50,50 @@ jobs:
           sudo systemctl restart php7.4-fpm
       - name: phpunit-test
         run: sudo XDEBUG_MODE=coverage ./vendor/bin/phpunit #如不设XDEBUG_MODE=coverage,则不生成coverage.xml
-      - name: Up-Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{secrets.CODECOV_TOKEN}}
-          file: ./tests/report/coverage.xml
-          directory: ./tests/report/
-          fail_ci_if_error: true #出错暂停
-          verbose: true #列出详情
+
       # - uses: php-actions/phpunit@v2
       #   with:
       #     configuration: ./phpunit.xml
       #     version: 9.5.2
       #     php_version: 7.4
       #     php_extensions: xdebug mbstring mysqli pdo_mysql
+
+      - name: Upload-codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@master
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: ./tests/report/coverage.xml
+
+      # - name: Up-Codecov
+      #   uses: codecov/codecov-action@v1
+      #   with:
+      #     token: ${{secrets.CODECOV_TOKEN}}
+      #     file: ./tests/report/coverage.xml
+      #     directory: ./tests/report/
+      #     fail_ci_if_error: true #出错暂停
+      #     verbose: true #列出详情
+
+      # 运行Codacy需要干净的环境
+      - name: Clean-file
+        run: git clean -df
+      # 运行Codacy,可使用.codacy.yml配置
+      - name: Codacy
+        uses: codacy/codacy-analysis-cli-action@master
+        with:
+          # tool: PHP_CodeSniffer,PHP Mess Detector,PHPCPD,PHP Depend,phpmd,phpcs #参考: https://docs.codacy.com/getting-started/supported-languages-and-tools/
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          upload: true #上传"代码质量"报告到Codacy(因为本地审查代码,要关闭远程Codacy的审查功能(Repository analysis开启))
+          format: sarif
+          output: ../results.sarif #要求干净的环境,把文件放在项目外,否则会报错
+          gh-code-scanning-compat: true #兼容Github的报错等级
+          verbose: true #列出详情
+          max-allowed-issues: 2147483647 #允许最大的"问题数"
+      # 对接Github的Security菜单
+      - name: Upload-github-sarif-reporter
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: ../results.sarif
+
   cd:
     needs: ci
     runs-on: ubuntu-20.04
