@@ -100,7 +100,7 @@ class Subscribe
                         }
                     });
                 }
-                if (isset($value['level']) && $value['level'] > 0 && is_array($env['superUrl']) && count($env['superUrl']) > 0) {
+                if (isset($value['level']) && $value['level'] >= 0 && is_array($env['superUrl']) && count($env['superUrl']) > 0) {
                     $subscription .= implode(PHP_EOL, $env['superUrl']); //其他分享链接,vmess
                 }
 
