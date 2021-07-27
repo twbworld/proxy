@@ -54,5 +54,13 @@
         "enable": true,
         "level": 0,
         "expiryDate": "2021-07-01"
+    },
+    {
+        "username": "210727_wtjzy",
+        "password": "210727_wtjzy",
+        "quota": 1000,
+        "enable": true,
+        "level": 0,
+        "expiryDate": "2022-01-01"
     }
 ]
