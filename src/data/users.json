@@ -29,7 +29,7 @@
         "quota": 100,
         "enable": true,
         "level": 0,
-        "expiryDate": "2022-05-01"
+        "expiryDate": "2023-05-01"
     },
     {
         "username": "210301_acac945",
@@ -66,7 +66,7 @@
     {
         "username": "220407_sunshinepeng",
         "password": "220407_sunshinepeng",
-        "quota": 50,
+        "quota": 100,
         "enable": true,
         "level": 0,
         "expiryDate": "2023-05-01"
