@@ -16,14 +16,6 @@
         "expiryDate": "2099-01-01"
     },
     {
-        "username": "kxl",
-        "password": "kxl",
-        "quota": -1,
-        "enable": true,
-        "level": 1,
-        "expiryDate": ""
-    },
-    {
         "username": "210401_xrzdwxh0709",
         "password": "210401_xrzdwxh0709",
         "quota": 100,
@@ -45,7 +37,7 @@
         "quota": 50,
         "enable": true,
         "level": 0,
-        "expiryDate": "2099-01-01"
+        "expiryDate": "2022-01-01"
     },
     {
         "username": "210409_amao_koo",
