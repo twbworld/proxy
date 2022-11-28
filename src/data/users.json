@@ -62,5 +62,13 @@
         "enable": true,
         "level": 0,
         "expiryDate": "2023-05-01"
+    },
+    {
+        "username": "221128_wei20120552",
+        "password": "221128_wei20120552",
+        "quota": -1,
+        "enable": true,
+        "level": 1,
+        "expiryDate": ""
     }
 ]
