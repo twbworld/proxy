@@ -96,7 +96,7 @@ class Subscribe
                         // trojan://trojan@www.trojanDomain.com:443?sni=www.trojanDomain.com#外网信息复杂_理智分辨真假
                         // trojan://trojan@www.trojanDomain.com:443#外网信息复杂_理智分辨真假
                         if (!empty($val['domain'])) {
-                            $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':' . ($val['port'] ?? '443') . '?security=tls&alpn=h2&headerType=none&type=tcp&uTLS=chrome&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL; //trojan分享链接
+                            $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':' . ($val['port'] ?? '443') . '?security=tls&alpn=h2,http/1.1&headerType=none&type=tcp&uTLS=chrome&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL; //trojan分享链接
                         }
                     });
                 }

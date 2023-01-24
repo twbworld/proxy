@@ -28,7 +28,7 @@ jobs:
     env:
       TZ: Asia/Shanghai
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: php-actions/composer@v5
       - name: restart-mysql #该ubuntu-20.04自带mysql8.0
         run: sudo systemctl restart mysql
