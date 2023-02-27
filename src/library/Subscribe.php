@@ -93,10 +93,17 @@ class Subscribe
                 $env = self::loadJsonFile(self::$envPath);
                 if (is_array($env['trojan']) && count($env['trojan']) > 0) {
                     array_walk($env['trojan'], function ($val) use (&$subscription, $value) {
-                        // trojan://trojan@www.trojanDomain.com:443?sni=www.trojanDomain.com#外网信息复杂_理智分辨真假
-                        // trojan://trojan@www.trojanDomain.com:443#外网信息复杂_理智分辨真假
                         if (!empty($val['domain'])) {
-                            $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':' . ($val['port'] ?? '443') . '?security=tls&alpn=h2,http/1.1&headerType=none&type=tcp&uTLS=chrome&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL; //trojan分享链接
+                            //trojan分享链接
+                            if (isset($val['port']) && $val['port'] != '443') {
+                                //直连分享链接(trojan)
+                                $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':' . $val['port'] . '?security=tls&headerType=none&fp=chrome&uTLS=chrome&mux=1&alpn=h2,http/1.1&type=tcp&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL;
+                            }else {
+                                //cdn分享链接(trojan)
+                                $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':443?security=tls&headerType=none&fp=chrome&uTLS=chrome&mux=1&type=ws&path=/trojan-go-ws/&host=' . $val['domain'] . '&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL;
+                            }
+
+
                         }
                     });
                 }
