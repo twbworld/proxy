@@ -94,7 +94,7 @@ class Subscribe
             }
             $subscription = '';
             $env = self::loadJsonFile(self::$envPath);
-            $isClash = 'clash' == substr($_SERVER['SERVER_NAME'], 0, 4); //判断三级域名
+            $isClash = 'clash' == substr($_SERVER['SERVER_NAME'], 0, 5); //判断三级域名
             $clashIni = $isClash ? file_get_contents(self::$clashPath) : '';
             '' == $clashIni && $isClash = false;
             if (is_array($env['trojan']) && count($env['trojan']) > 0) {
