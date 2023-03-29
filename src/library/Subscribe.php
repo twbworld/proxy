@@ -13,6 +13,7 @@ class Subscribe
     private static $_instance = null;
     private static $usersPath = __DIR__ . '/../data/users.json';
     private static $envPath = __DIR__ . '/../config/.env';
+    private static $clashPath = __DIR__ . '/../config/clash.ini';
 
     // @codeCoverageIgnoreStart
 
@@ -88,32 +89,50 @@ class Subscribe
         }
 
         foreach ($usersData as $value) {
-            if (!empty($value['username']) && $value['username'] === $user) {
-                $subscription = '';
-                $env = self::loadJsonFile(self::$envPath);
-                if (is_array($env['trojan']) && count($env['trojan']) > 0) {
-                    array_walk($env['trojan'], function ($val) use (&$subscription, $value) {
-                        if (!empty($val['domain'])) {
-                            //trojan分享链接
-                            if (isset($val['port']) && $val['port'] != '443') {
-                                //直连分享链接(trojan)
-                                $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':' . $val['port'] . '?security=tls&headerType=none&fp=chrome&uTLS=chrome&mux=1&alpn=h2,http/1.1&type=tcp&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL;
-                            }else {
-                                //cdn分享链接(trojan)
-                                $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':443?security=tls&headerType=none&fp=chrome&uTLS=chrome&mux=1&type=ws&path=/trojan-go-ws/&host=' . $val['domain'] . '&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL;
-                            }
-
-
-                        }
-                    });
-                }
-                if (isset($value['level']) && $value['level'] > 0 && is_array($env['superUrl']) && count($env['superUrl']) > 0) {
-                    $subscription .= implode(PHP_EOL, $env['superUrl']); //其他分享链接,vmess
-                }
-
-                return base64_encode(trim($subscription, PHP_EOL));
-
+            if (empty($value['username']) || $value['username'] !== $user) {
+                continue;
             }
+            $subscription = '';
+            $env = self::loadJsonFile(self::$envPath);
+            $isClash = 'clash' == substr($_SERVER['SERVER_NAME'], 0, 4); //判断三级域名
+            $clashIni = $isClash ? file_get_contents(self::$clashPath) : '';
+            '' == $clashIni && $isClash = false;
+            if (is_array($env['trojan']) && count($env['trojan']) > 0) {
+                foreach ($env['trojan'] as $val) {
+                    if (empty($val['domain'])) {
+                        continue;
+                    }
+
+                    if (isset($val['port']) && $val['port'] != '443') {
+                        //直连分享链接(trojan)
+                        if ($isClash) {
+                            $wsConfig = '';
+                            $subscription .= str_replace(['%username%', '%domain%', '%port%', '%ws%'], [$value['username'], $val['domain'], $val['port'], $wsConfig], $clashIni);
+                        }else {
+                            $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':' . $val['port'] . '?security=tls&headerType=none&fp=chrome&uTLS=chrome&mux=1&alpn=h2,http/1.1&type=tcp&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL;
+                        }
+
+
+
+                    }else {
+                        //cdn分享链接(trojan)
+                        if ($isClash) {
+                            $wsConfig = ', network: ws, ws-opts: {path: /trojan-go-ws/, headers: {Host: ' . $val['domain'] . '}}';
+                            $subscription .= str_replace(['%username%', '%domain%', '%port%', '%ws%'], [$value['username'], $val['domain'], $val['port'], $wsConfig], $clashIni);
+                        }else {
+                            $subscription .= 'trojan://' . $value['username'] . '@' . $val['domain'] . ':443?security=tls&headerType=none&fp=chrome&uTLS=chrome&mux=1&type=ws&path=/trojan-go-ws/&host=' . $val['domain'] . '&sni=' . $val['domain'] . '#外网信息复杂_理智分辨真假' . PHP_EOL;
+                        }
+                    }
+
+
+                }
+            }
+            if (!$isClash && isset($value['level']) && $value['level'] > 0 && is_array($env['superUrl']) && count($env['superUrl']) > 0) {
+                $subscription .= implode(PHP_EOL, $env['superUrl']); //其他分享链接,vmess
+            }
+
+            return $isClash ? $subscription : base64_encode(trim($subscription, PHP_EOL));
+
         }
 
         self::exit();
