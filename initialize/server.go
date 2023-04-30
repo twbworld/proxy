@@ -23,10 +23,18 @@ func Init(){
 		log.Fatalln("打开文件错误: ", err)
 	}
 	gin.DefaultWriter = io.MultiWriter(ginfile)
-	// 禁用控制台颜色，将日志写入文件时不需要控制台颜色。
-	gin.DisableConsoleColor()
+
+	mode := gin.ReleaseMode
+	if global.Config.Env.Debug {
+		mode = gin.DebugMode
+	}
+
+	gin.SetMode(mode)
+
+	gin.DisableConsoleColor() //禁用控制台颜色,将日志写入文件时不需要控制台颜色
 
 	ginServer := gin.Default()
+
 
 	router.Init(ginServer)
 
