@@ -23,5 +23,5 @@ type Env struct{
 	Mysql Mysql `json:"mysql" mapstructure:"mysql" info:"数据库配置"`
 	SuperUrl []string `json:"superUrl" mapstructure:"superUrl" info:"除trojan外的连接"`
 	Trojan []Trojan `json:"trojan" mapstructure:"trojan" info:"可配置多个trojan地址"`
-	Telegram Telegram `json:"tg" mapstructure:"tg" info:"Telegram聊天室配置"`
+	Telegram Telegram `json:"telegram" mapstructure:"telegram" info:"Telegram聊天室配置"`
 }
