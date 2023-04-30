@@ -18,15 +18,11 @@
 *.sublime-project
 *.sw[a-p]
 modules.xml
+vendor/
+_vendor/
 *.ipr
 *.iml
 ！
-
-# php
-vendor/
-_vendor/
-composer.lock
-composer.phar
 
 #js
 node_modules/
@@ -80,4 +76,6 @@ ehthumbs_vista.db
 /worktree*/
 .phpunit.result.cache
 /tests/report/*
+tmp/
+/server
 !.gitkeep
