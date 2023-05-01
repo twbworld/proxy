@@ -52,7 +52,8 @@ func Expiry() {
 	}
 
 	if len(users) < 1 {
-		log.Fatalln("没有过期用户[gsfiod]")
+		log.Println("没有过期用户[gsfiod]")
+		return
 	}
 
 	tz, err := time.LoadLocation("Asia/Shanghai")
@@ -79,7 +80,8 @@ func Expiry() {
 
 	}
 	if len(usersHandle) < 1 {
-		log.Fatalln("没有过期用户[ofijsdfio]")
+		log.Println("没有过期用户[ofijsdfio]")
+		return
 	}
 
 	tx, err := dao.DB.Beginx()
