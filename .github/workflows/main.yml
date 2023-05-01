@@ -117,7 +117,7 @@ jobs:
           key: ${{ secrets.KEY }}
           port: ${{ secrets.PORT }}
           script: |
-            docker exec go /bin/bash -c 'go build -o server main.go && exit'
+            docker exec go /bin/bash -c 'go build -o server main.go && ./server -a handle && exit'
             docker restart go
             docker exec trojan /bin/bash -c 'systemctl restart trojan && exit'
             exit
