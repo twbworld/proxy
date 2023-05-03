@@ -2,7 +2,8 @@ package router
 
 import (
 	"database/sql"
-	"log"
+	"net/http"
+
 	"github.com/twbworld/proxy/controller"
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/model"
@@ -16,6 +17,12 @@ func Init(ginServer *gin.Engine) {
 
 	ginServer.StaticFile("/favicon.ico", "static/favicon.ico")
 
+
+	ginServer.NoRoute(func(ctx *gin.Context) {
+        // 实现内部重定向
+        ctx.Redirect(http.StatusMovedPermanently, "/404.html")
+    })
+
 	//nginx: rewrite ^/(.*)\.html$ /index?u=$1 break;
 	ginServer.GET("/index", validatorUri(), controller.Index)
 }
@@ -25,17 +32,16 @@ func validatorUri() gin.HandlerFunc {
 		userName := ctx.Query("u")
 		if userName == "" || len(userName) < 3 || len(userName) > 50 {
 			ctx.Abort()
+			ctx.Redirect(http.StatusMovedPermanently, "/404.html")
 			return
 		}
 
 		var user model.Users
-		err := dao.DB.Get(&user, "SELECT * FROM `users` WHERE `username`=?", userName)
-		if err == sql.ErrNoRows {
+		err := dao.GetUsersByUserName(&user, userName)
+
+		if err == sql.ErrNoRows || err != nil {
 			ctx.Abort()
-			return
-		} else if err != nil {
-			ctx.Abort()
-			log.Println("查询出错: ", err)
+			ctx.Redirect(http.StatusMovedPermanently, "/404.html")
 			return
 		}
 

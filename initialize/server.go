@@ -71,6 +71,6 @@ func closeBy(server *http.Server) {
 	if err := server.Shutdown(c); nil != err {
 		log.Fatalln(err)
 	}
-	log.Println("server exiting...")
+	log.Println("服务关闭!")
 	service.TgSend("程序关闭成功")
 }

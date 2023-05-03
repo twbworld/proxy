@@ -3,10 +3,10 @@ package dao
 import (
 	"encoding/json"
 	"errors"
-	"io"
-	"os"
 	"github.com/twbworld/proxy/model"
 	"github.com/twbworld/proxy/utils"
+	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -14,14 +14,18 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func GetUsers(users *[]model.Users, where ...string) (err error) {
+func GetUsers(users *[]model.Users, where ...string) (error) {
 	sql := "SELECT `id`, `username`, `passwordShow`, `quota`, `useDays`, `expiryDate` FROM `users` WHERE 1=1"
 	if len(where) > 0 {
 		sql += " AND " + where[0]
 	}
 
-	err = DB.Select(users, sql)
-	return
+	return DB.Select(users, sql)
+}
+
+func GetUsersByUserName(users *model.Users, userName string) (error) {
+	sql := "SELECT `id`, `username`, `passwordShow`, `quota`, `useDays`, `expiryDate` FROM `users` WHERE `username`=?"
+	return DB.Get(users, sql, userName)
 }
 
 func UpdateUsersClear(tx *sqlx.Tx) (err error) {
