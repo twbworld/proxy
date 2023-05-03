@@ -2,16 +2,16 @@ package initialize
 
 import (
 	"encoding/json"
-	"log"
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model"
 	"github.com/twbworld/proxy/service"
 	"github.com/twbworld/proxy/utils"
+	"log"
 	"time"
 )
 
-//流量上下行的记录清零
+// 流量上下行的记录清零
 func Clear() {
 
 	tx, err := dao.DB.Beginx()
@@ -37,7 +37,7 @@ func Clear() {
 	}
 }
 
-//过期用户处理
+// 过期用户处理
 func Expiry() {
 	var (
 		users       []model.Users
@@ -64,18 +64,24 @@ func Expiry() {
 	if err != nil {
 		log.Fatalln("时间出错[djaksofja]: ", err)
 	}
+	t1 := time.Now().In(tz).AddDate(0, 0, -7)
+	t2 := time.Now().In(tz).AddDate(0, 0, -5)
 
 	for _, value := range users {
 		if *value.ExpiryDate == "" || value.Id < 1 {
 			continue
 		}
-		t1, _ := time.Parse(time.DateOnly, *value.ExpiryDate)
+		ti, _ := time.Parse(time.DateOnly, *value.ExpiryDate)
 		if err != nil {
 			continue
 		}
-		if t.After(t1) {
+		if t.After(ti) {
 			usersHandle = append(usersHandle, value)
 			ids = append(ids, value.Id)
+		}
+
+		if t1.After(ti) && t2.Before(ti) {
+			service.TgSend(value.Username + "快到期" + ti.In(tz).Format(time.DateOnly))
 		}
 
 	}
@@ -111,7 +117,7 @@ func Expiry() {
 
 }
 
-//处理用户信息,对mysql数据库作处理
+// 处理用户信息,对mysql数据库作处理
 func Handle() {
 	var (
 		usersJson  []model.UsersInfo
