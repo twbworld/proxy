@@ -12,16 +12,12 @@ import (
 )
 
 func Init(ginServer *gin.Engine) {
-
-	ginServer.Use(gin.Recovery())
-
 	ginServer.StaticFile("/favicon.ico", "static/favicon.ico")
 
-
 	ginServer.NoRoute(func(ctx *gin.Context) {
-        // 实现内部重定向
-        ctx.Redirect(http.StatusMovedPermanently, "/404.html")
-    })
+		// 实现内部重定向
+		ctx.Redirect(http.StatusMovedPermanently, "/404.html")
+	})
 
 	//nginx: rewrite ^/(.*)\.html$ /index?u=$1 break;
 	ginServer.GET("/index", validatorUri(), controller.Index)

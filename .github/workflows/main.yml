@@ -53,44 +53,31 @@ jobs:
       with:
         category: "/language:${{matrix.language}}"
 
-  # ci:
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     TZ: Asia/Shanghai
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: php-actions/composer@v5
-  #     - name: restart-mysql #该ubuntu-20.04自带mysql8.0
-  #       run: sudo systemctl restart mysql
-  #     - name: create-db
-  #       run: sudo mysqladmin -uroot -proot create trojan
-  #     - name: save-data
-  #       run: sudo mysql -uroot -proot trojan < src/data/users.sql
-  #     - name: add-envFile
-  #       env:
-  #         ENVDATA: '{"superUrl":["vmess://aa=="],"trojan":[{"domain":"www.domain.com","port":"80"}],"mysqlConfig":{"dbname":"trojan","host":"localhost","username":"root","password":"root"}}'
-  #       run: sudo echo $ENVDATA > src/config/.env
-  #     - name: use-php7.4
-  #       run: | #使用7.4(该ubuntu-20.04自带7.4/php8.0(默认)); 卸载php8的xdebug, 并安装php7的xdebug
-  #         sudo ln -sf /bin/php7.4 /bin/php
-  #         sudo ln -sf /usr/bin/php7.4 /usr/bin/php
-  #         sudo apt-get update
-  #         sudo apt-get remove -y php-xdebug
-  #         sudo apt-get install -y php-xdebug
-  #         sudo systemctl restart php7.4-fpm
-  #     - name: phpunit-test
-  #       run: sudo XDEBUG_MODE=coverage ./vendor/bin/phpunit #如不设XDEBUG_MODE=coverage,则不生成coverage.xml
-
-  #     # - uses: php-actions/phpunit@v2
-  #     #   with:
-  #     #     configuration: ./phpunit.xml
-  #     #     version: 9.5.2
-  #     #     php_version: 7.4
-  #     #     php_extensions: xdebug mbstring mysqli pdo_mysql
-
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - uses: actions/checkout@v3
+      - name: restart-mysql #该ubuntu-20.04自带mysql8.0
+        run: sudo systemctl restart mysql
+      - name: create-db
+        run: sudo mysqladmin -uroot -proot create trojan
+      - name: save-data
+        run: sudo mysql -uroot -proot trojan < dao/users.sql
+      - name: add-envFile
+        env:
+          ENVDATA: '{"debug": true, "mysql": {"dbname": "trojan", "host": "localhost", "username": "root", "password": "root"}, "superUrl": ["vmess://aa=="], "trojan": [{"domain": "www.domain.com", "port": "443", "wsPath": "/trojan-go-ws/"}], "telegram": {"token": "", "id": 0}}'
+        run: sudo echo $ENVDATA > config/.env
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.20
+      - name: golang testing
+        run: sudo go test -v ./...
 
   cd:
-    # needs: ci
+    needs: ci
     runs-on: ubuntu-20.04
     env:
       TZ: Asia/Shanghai
