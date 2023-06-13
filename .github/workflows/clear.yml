@@ -5,7 +5,7 @@ on:
     - cron: '0 0 1 * *' #每月1号0点执行,注意,这是UTC时间,比北京时间晚8个小时,无奈实现不了北京时间1号0点
 jobs:
   clear:
-    runs-on: ubuntu-20.04 #虚拟环境(github提供)
+    runs-on: ubuntu-latest #虚拟环境(github提供)
     env:
       TZ: Asia/Shanghai
     steps:
@@ -13,9 +13,9 @@ jobs:
       - name: clear-data
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
+          host: ${{ vars.HOST }}
+          username: ${{ vars.USERNAME }}
           key: ${{ secrets.KEY }}
-          port: ${{ secrets.PORT }}
+          port: ${{ vars.PORT }}
           script: |
             docker exec go /bin/bash -c 'chmod +x server && ./server -a clear && exit'
