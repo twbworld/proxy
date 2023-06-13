@@ -17,7 +17,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Init(){
+func Init() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM) //监听关闭(ctrl+C)指令
+	defer stop()
+
 	ginfile, err := os.OpenFile(global.Config.AppConfig.GinLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatalln("打开文件错误: ", err)
@@ -35,11 +38,13 @@ func Init(){
 
 	ginServer := gin.Default()
 
-
 	router.Init(ginServer)
 
 	// ginServer.Run(":8081")
-	server := http.Server{Addr: global.Config.AppConfig.GinAddr, Handler: ginServer}
+	server := &http.Server{
+		Addr:    global.Config.AppConfig.GinAddr,
+		Handler: ginServer,
+	}
 
 	//协程启动服务
 	go func() {
@@ -48,28 +53,22 @@ func Init(){
 		}
 	}()
 
-	log.Println("启动成功")
+	log.Printf("启动成功, pid: %d", syscall.Getpid())
 	service.TgSend("启动成功")
 
-	closeBy(&server)
-
-}
-
-// 平滑优雅关闭服务
-func closeBy(server *http.Server) {
-	sb := make(chan os.Signal, 1)
-	signal.Notify(sb, syscall.SIGINT, syscall.SIGTERM) //监听关闭(ctrl+C)指令
-	<-sb                                               //阻塞等待
-
-	service.TgSend("关闭中...")
+	// 平滑优雅关闭服务
+	<-ctx.Done() //阻塞等待
 
 	//来到这 证明有关闭指令
-	c, f := context.WithTimeout(context.Background(), 5*time.Second) //如果有连接就超时5s后关闭
-	defer f()
+	service.TgSend("关闭中...")
+	stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //如果有连接就超时5s后关闭
+	defer cancel()
 
 	//关闭监听端口
-	if err := server.Shutdown(c); nil != err {
-		log.Fatalln(err)
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown: ", err)
 	}
 	log.Println("服务关闭!")
 	service.TgSend("程序关闭成功")
