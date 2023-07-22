@@ -1,74 +1,10 @@
 [
     {
-        "username": "twbworld",
-        "password": "twbworld",
-        "quota": -1,
-        "enable": true,
-        "level": 1,
-        "expiryDate": ""
-    },
-    {
         "username": "test",
         "password": "test",
         "quota": 50,
         "enable": true,
         "level": 0,
         "expiryDate": "2099-01-01"
-    },
-    {
-        "username": "210401_xrzdwxh0709",
-        "password": "210401_xrzdwxh0709",
-        "quota": 100,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2023-05-01"
-    },
-    {
-        "username": "210301_acac945",
-        "password": "210301_acac945",
-        "quota": 50,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2021-05-01"
-    },
-    {
-        "username": "210313_tylor_singer",
-        "password": "210313_tylor_singer",
-        "quota": 50,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2022-01-01"
-    },
-    {
-        "username": "210409_amao_koo",
-        "password": "210409_amao_koo",
-        "quota": 100,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2024-05-01"
-    },
-    {
-        "username": "210727_wtjzy",
-        "password": "210727_wtjzy",
-        "quota": 1000,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2022-01-01"
-    },
-    {
-        "username": "220407_sunshinepeng",
-        "password": "220407_sunshinepeng",
-        "quota": 100,
-        "enable": true,
-        "level": 0,
-        "expiryDate": "2024-06-01"
-    },
-    {
-        "username": "221128_wei20120552",
-        "password": "221128_wei20120552",
-        "quota": -1,
-        "enable": true,
-        "level": 1,
-        "expiryDate": ""
     }
 ]

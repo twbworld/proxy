@@ -6,33 +6,39 @@
 ![](https://img.shields.io/badge/language-golang-cyan)
 [![](https://img.shields.io/github/license/twbworld/proxy)](https://github.com/twbworld/proxy/blob/main/LICENSE)
 
-### 简介
-翻墙代理服务器的订阅和用户管理 控制代码 ; 可作为订阅服务器 , 以及 , 通过 `GitHub-Actions` 作为 `持续集成` , 自动化更新数据库(安装 ***`Jrohy/trojan`*** 作为前提)
-> 推荐在Docker内使用
+## 简介
+**翻墙订阅链接服务 和 用户管理**
 
-### 准备
-基于 [Jrohy/trojan](https://github.com/Jrohy/trojan) 控制面板, 首先进行安装
-``` sh
-$ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/trojan-install" && chmod +x install_trojan_go.sh && ./install_trojan_go.sh
-```
+> 本项目配合 [trojan-go](https://github.com/p4gefau1t/trojan-go) 使用, 并使用到其规定的数据库
 
-### 目录结构 : 
+### 本项目有两个作用:
+
+1. 用户管理(增删改查)
+    > 程序识别相关users.json文件, 自动同步到[trojan-go](https://github.com/p4gefau1t/trojan-go)数据库; 如喜欢用shell管理用户和操作trojan-go, 建议出门左转使用[Jrohy/trojan](https://github.com/Jrohy/trojan)哟
+2. 程序返回客户端可识别的翻墙配置, 即订阅功能
+    > 访问含用户名的特定订阅链接, 程序返回`trojan-go`和`v2ray`客户端可以识别的base64码或`clash`可识别配置文件; 在客户端上配置订阅链接即可翻墙;
+
+## 目录结构 : 
 ``` sh
 ├── .editorconfig
 ├── .gitattributes
 ├── .github/
 │   └── workflows/          #存放GitHub-Actions的工作流文件
 │       ├── ci.yml
-│       ├── clear.yml
-│       └── expiry.yml
+│       ├── main.yml
+│       ├── push-images.yaml
+│       ├── review.yml
+│       └── test.yaml
 ├── .gitignore
 ├── LICENSE
 ├── README.md
+├── Dockerfile          #构建docker镜像
 ├── config/
-│   ├── appConfig.go
-│   ├── appConfig.json  #项目配置
+│   ├── appConfig.go    #项目配置
 │   ├── clash.ini       #clash配置模板
+│   ├── .trojan-go       #trojan-go配置文件,需自行新增
 │   ├── config.go
+│   ├── trojanGoConfig.go #trojan-go配置
 │   ├── .env            #机密配置文件,数据库之类的
 │   ├── .env.example    #配置模板
 │   └── env.go
@@ -41,7 +47,7 @@ $ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/troj
 ├── dao/
 │   ├── db_handle.go    #用户数据操作
 │   ├── mysql.go
-│   ├── users.json      #用户,要同步到数据库
+│   ├── users.json      #用户数据,需同步到数据库
 │   └── users.sql       #数据库文件
 ├── global/
 │   ├── app.go          #全局变量的初始化
@@ -53,9 +59,9 @@ $ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/troj
 │   ├── server.go       #启动代理订阅的服务
 │   └── userHandle.go   #命令行处理用户数据库的相关代码
 ├── log/
-│   ├── gin.log
+│   ├── gin.log         #gin日志
 │   ├── .gitkeep
-│   └── run.log
+│   └── run.log         #业务日志
 ├── main.go             #入口
 ├── model/
 │   ├── users.go
@@ -71,37 +77,99 @@ $ wget -N --no-check-certificate -q -O install_trojan_go.sh "https://git.io/troj
 └── utils/
     └── tool.go
 ```
-### 使用
-**自行 clone项目 和 安装go环境 和 安装`Jrohy/trojan`项目**
 
-**连接配置`Jrohy/trojan`数据库: config/.env**
-```sh
-$ cd src && go mod tidy && go build -o server main.go
+## 准备
+* 如已安装 [trojan-go](https://github.com/p4gefau1t/trojan-go) ,则直接配置其数据库即可;
+  否则需自行建库, 点击查看[数据库结构](https://p4gefau1t.github.io/trojan-go/basic/full-config/#mysql数据库选项)
+* 配置数据库有两种方式; 为了与`trojan-go`使用同一个数据库,程序首先会识别config目录下是否存在名为`.trojan-go`的trojan-go配置文件, 如果文件不存在, 则读取相关环境变量, 如下
+    ### 环境变量参数
+    |  变量值   |  解释  | 默认 |
+    |  ----  | ----  | ---- |
+    | MYSQL_HOST  | 地址 | "127.0.0.1" |
+    | MYSQL_PORT  | 端口 | "3306" |
+    | MYSQL_DBNAME  | 库名 | "trojan" |
+    | MYSQL_USERNAME  | 用户名 | "root" |
+    | MYSQL_PASSWORD  | 密码 | "" |
+* 配置订阅相关信息: `config/.env`
+  > 配置文件下的`trojan`配置`Port`为443时, 默认域名使用cdn, 程序返回的配置使用`WebSocket`协议, 请看[service/index.go](https://github.com/twbworld/proxy/blob/main/service/index.go)代码
+* 配置监听端口等信息: `config/trojanGoConfig.go`
+
+
+## 安装
+
+### docker-compose
+``` yaml
+version: "3"
+services:
+    mysql:
+        image: mysql:8.0
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: true
+        volumes:
+            - ${PWD}/dao/users.sql:/docker-entrypoint-initdb.d/users.sql:ro
+    trojan-go:
+        image: p4gefau1t/trojan-go:latest
+        depends_on:
+            - mysql
+        ports:
+            - 443:443
+        volumes:
+            - ${PWD}/trojan-go.json:/etc/trojan-go/config.json:rw
+
+    proxy:
+        image: ghcr.io/twbworld/proxy:latest
+        container_name: trojan
+        depends_on:
+        - mysql
+        ports:
+            - 8080:8080
+        # environment:
+        #     MYSQL_HOST: mysql
+        #     MYSQL_DBNAME: trojan
+        volumes:
+            - ${PWD}/config/.env.example:/app/config/.env:ro
+            - ${PWD}/trojan-go.json:config/.trojan-go:rw #需要用到trojan-go配置文件下的mysql配置
 ```
 
-#### 运行订阅服务
+### 打包本地运行
 ```sh
+$ cp config/.env.example config/.env
+
+$ cp trojan-go.json config/.trojan-go
+
+$ go mod tidy && go build -o server main.go
+
 $ ./server
 ```
 
-> 配置监听端口: config/appConfig.json  
-> 订阅地址例子: `www.domain.com/u=username`
+## 使用
 
-#### 根据dao/users.json更新数据库用户信息
+> 本项目利用了 `GitHub-Actions` 作为 `持续集成` 处理数据, [相关代码](https://github.com/twbworld/proxy/blob/main/.github/workflows/ci.yml), 也可使用命令行, 如下
+
+### 根据`dao/users.json`文件更新数据库用户信息
 ```sh
+$ docker exec -it trojan /app/server -a handle
+或
 $ ./server -a handle
 ```
 
-#### 流量上下行的记录清零
+### 流量上下行的记录清零
 ```sh
+$ docker exec -it trojan /app/server -a clear
+或
 $ ./server -a clear
 ```
 
-#### 过期用户处理
+### 过期用户处理
 ```sh
+$ docker exec -it trojan /app/server -a expiry
+或
 $ ./server -a expiry
 ```
 
-#### 持续集成
 
-利用 `GitHub-Actions`, 可以作为参考
+### 客户端订阅
+* `trojan-go`和`v2ray`订阅地址例子: `trojan.domain.com/username.html`
+* `clash`订阅地址例子: `clash.domain.com/username.html`
+    > `clash`与前两者不同, 其识别的是配置文件, 所以clash需不同的网址, 且以clash开头的域名, 请自行解析域名, 而前两者则不要求;[相关代码](https://github.com/twbworld/proxy/blob/main/controller/index.go)
+> 提示: 这个客户端使用的`订阅域名`, 跟`连接trojan-go的域名`是不一样哦; 可以理解为: 利用`订阅域名`获取连接信息, 这些连接信息就包含了用于连接trojan-go服务的域名;

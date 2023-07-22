@@ -1,0 +1,70 @@
+name: push-images
+on:
+  workflow_dispatch: #github页面手动触发
+  workflow_call: #允许其他workflow调用
+    secrets:
+      DOCKERHUB_TOKEN:
+        description: 'dockerHub用户凭证'
+        required: false
+    inputs:
+      image-tags:
+        description: '镜像tags'
+        required: true
+        type: string
+      image-labels:
+        description: '镜像labels'
+        required: false
+        type: string
+      dockerhub-username:
+        description: 'dockerHub用户名'
+        required: false
+        default: ''
+        type: string
+      platforms:
+        description: '构建镜像平台'
+        default: 'linux/amd64,linux/arm64/v8'
+        required: false
+        type: string
+
+jobs:
+
+  push-images:
+    name: Push Docker image to multiple registries
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: login DockerHub
+        if: inputs.dockerhub-username #这无法判断secrets
+        uses: docker/login-action@v2
+        with:
+          username: ${{ inputs.dockerhub-username }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: login ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ inputs.platforms }}
+          push: true
+          tags: ${{ inputs.image-tags }}
+          labels: ${{ inputs.image-labels }}

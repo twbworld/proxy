@@ -7,7 +7,6 @@ import (
 	"github.com/twbworld/proxy/model"
 	"github.com/twbworld/proxy/service"
 	"github.com/twbworld/proxy/utils"
-	"log"
 	"time"
 )
 
@@ -16,7 +15,7 @@ func Clear() {
 
 	tx, err := dao.DB.Beginx()
 	if err != nil {
-		log.Fatalln("开启事务失败[ijhdfakkaop]: ", err)
+		global.Log.Fatalln("开启事务失败[ijhdfakkaop]: ", err)
 	}
 
 	defer func() {
@@ -24,7 +23,7 @@ func Clear() {
 			tx.Rollback()
 			panic(p)
 		} else if err != nil {
-			log.Println("事务回滚[orfiujojnmg]: ", err)
+			global.Log.Warn("事务回滚[orfiujojnmg]: ", err)
 			tx.Rollback()
 		} else {
 			err = tx.Commit()
@@ -33,7 +32,7 @@ func Clear() {
 
 	err = dao.UpdateUsersClear(tx)
 	if err != nil {
-		log.Fatalln("清除失败[gpodk]: ", err)
+		global.Log.Fatalln("清除失败[gpodk]: ", err)
 	}
 }
 
@@ -48,21 +47,21 @@ func Expiry() {
 	err := dao.GetUsers(&users, "`quota` != 0 AND `useDays` != 0")
 
 	if err != nil {
-		log.Fatalln("查询失败[fsuojnv]: ", err)
+		global.Log.Fatalln("查询失败[fsuojnv]: ", err)
 	}
 
 	if len(users) < 1 {
-		log.Println("没有过期用户[gsfiod]")
+		global.Log.Info("没有过期用户[gsfiod]")
 		return
 	}
 
 	tz, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
-		log.Fatalln("时区设置错误[pgohkf]: ", err)
+		global.Log.Fatalln("时区设置错误[pgohkf]: ", err)
 	}
 	t, err := time.Parse(time.DateTime, time.Now().In(tz).Format(time.DateOnly+" 00:00:01"))
 	if err != nil {
-		log.Fatalln("时间出错[djaksofja]: ", err)
+		global.Log.Fatalln("时间出错[djaksofja]: ", err)
 	}
 	t1 := time.Now().In(tz).AddDate(0, 0, -7)
 	t2 := time.Now().In(tz).AddDate(0, 0, -5)
@@ -86,13 +85,13 @@ func Expiry() {
 
 	}
 	if len(usersHandle) < 1 {
-		log.Println("没有过期用户[ofijsdfio]")
+		global.Log.Info("没有过期用户[ofijsdfio]")
 		return
 	}
 
 	tx, err := dao.DB.Beginx()
 	if err != nil {
-		log.Fatalln("开启事务失败: ", err)
+		global.Log.Fatalln("开启事务失败: ", err)
 	}
 
 	defer func() {
@@ -100,7 +99,7 @@ func Expiry() {
 			tx.Rollback()
 			panic(p)
 		} else if err != nil {
-			log.Println("事务回滚[orjdnmg]: ", err)
+			global.Log.Warn("事务回滚[orjdnmg]: ", err)
 			tx.Rollback()
 		} else {
 			err = tx.Commit()
@@ -109,10 +108,9 @@ func Expiry() {
 
 	err = dao.UpdateUsersExpiry(ids, tx)
 	if err != nil {
-		log.Fatalln("更新失败[fofiwjm]: ", err)
+		global.Log.Fatalln("更新失败[fofiwjm]: ", err)
 	}
 
-	log.Println("过期用户处理: ", ids)
 	global.Log.Info("过期用户处理: ", ids)
 
 }
@@ -127,22 +125,22 @@ func Handle() {
 
 	err := dao.GetUsersByJson(global.Config.AppConfig.UsersPath, &usersJson)
 	if err != nil {
-		log.Fatalln("读取用户文件错误[odnoskjk]: ", err)
+		global.Log.Fatalln("读取用户文件错误[odnoskjk]: ", err)
 	}
 	if len(usersJson) < 1 {
-		log.Fatalln("用户文件有误[udldfjos]: ", err)
+		global.Log.Fatalln("用户文件有误[udldfjos]: ", err)
 	}
 
 	err = dao.GetUsers(&usersMysql)
 	if err != nil {
-		log.Fatalln("查询失败[opfiskjj]: ", err)
+		global.Log.Fatalln("查询失败[opfiskjj]: ", err)
 	}
 
 	usersMysqlName := utils.ListToMap(usersMysql, "Username")
 
 	tx, err := dao.DB.Beginx()
 	if err != nil {
-		log.Fatalln("开启事务失败: ", err)
+		global.Log.Fatalln("开启事务失败: ", err)
 	}
 
 	defer func() {
@@ -150,12 +148,12 @@ func Handle() {
 			tx.Rollback()
 			panic(p)
 		} else if err != nil {
-			log.Println("事务回滚[uirf]: ", err)
+			global.Log.Warn("事务回滚[uirf]: ", err)
 			tx.Rollback()
 		} else {
 			err = tx.Commit()
 
-			log.Printf("%s", res)
+			global.Log.Infof("%s", res)
 			jsonstr, err := json.Marshal(res)
 			if err == nil {
 				global.Log.Info("汇总: ", string(jsonstr))
@@ -183,7 +181,7 @@ func Handle() {
 				err = dao.UpdateUsersHandle(user, tx)
 
 				if err != nil {
-					log.Fatalln("更新用户失败[oisdfsm]: ", err)
+					global.Log.Fatalln("更新用户失败[oisdfsm]: ", err)
 				}
 				jsonstr, err := json.Marshal(name)
 				jsonstr2, err2 := json.Marshal(user)
@@ -197,7 +195,7 @@ func Handle() {
 		} else {
 			err = dao.AddUsersHandle(user, tx)
 			if err != nil {
-				log.Fatalln("新增用户失败[poertiflmgo]: ", err)
+				global.Log.Fatalln("新增用户失败[poertiflmgo]: ", err)
 			}
 			jsonstr, err := json.Marshal(user)
 			if err == nil {
@@ -211,7 +209,7 @@ func Handle() {
 		for _, value := range usersMysqlName {
 			err = dao.DelUsersHandle(value.(model.Users).Id, tx)
 			if err != nil {
-				log.Fatalln("新增用户失败[poertiflmgo]: ", err)
+				global.Log.Fatalln("新增用户失败[poertiflmgo]: ", err)
 			}
 			jsonstr, err := json.Marshal(value.(model.Users))
 			if err == nil {

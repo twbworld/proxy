@@ -1,0 +1,34 @@
+name: review
+on:
+  workflow_dispatch: #github页面手动触发
+  workflow_call: #允许其他workflow调用
+    secrets:
+      CODACY_PROJECT_TOKEN:
+        description: 'CODACY用户凭证'
+        required: true
+
+jobs:
+
+  codacy-review:
+    runs-on: ubuntu-latest #虚拟环境(github提供)
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - uses: actions/checkout@v3
+      # 运行Codacy,可使用.codacy.yml配置
+      - name: Codacy Review
+        uses: codacy/codacy-analysis-cli-action@master
+        with:
+          # tool: PHP_CodeSniffer,PHP Mess Detector,PHPCPD,PHP Depend,phpmd,phpcs #参考: https://docs.codacy.com/getting-started/supported-languages-and-tools/
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          upload: true #上传"代码质量"报告到Codacy(因为本地审查代码,要关闭远程Codacy的审查功能(Repository analysis开启))
+          format: sarif
+          output: ../results.sarif #要求干净的环境,把文件放在项目外,否则会报错
+          gh-code-scanning-compat: true #兼容Github的报错等级
+          verbose: true #列出详情
+          max-allowed-issues: 2147483647 #允许最大的"问题数"
+      # 对接Github的Security菜单
+      - name: Upload-github-sarif-reporter
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: ../results.sarif

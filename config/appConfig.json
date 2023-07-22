@@ -1,9 +1,0 @@
-{
-  "projectName": "VPN会员系统",
-  "ginAddr": ":8080",
-  "envPath": "config/.env",
-  "clashPath": "config/clash.ini",
-  "usersPath": "dao/users.json",
-  "ginLogPath": "log/gin.log",
-  "runLogPath": "log/run.log"
-}

@@ -3,7 +3,6 @@ package initialize
 import (
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,7 +22,7 @@ func Init() {
 
 	ginfile, err := os.OpenFile(global.Config.AppConfig.GinLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		log.Fatalln("打开文件错误: ", err)
+		global.Log.Fatalln("打开文件错误: ", err)
 	}
 	gin.DefaultWriter = io.MultiWriter(ginfile)
 
@@ -49,11 +48,11 @@ func Init() {
 	//协程启动服务
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalln(err)
+			global.Log.Fatalln(err)
 		}
 	}()
 
-	log.Printf("启动成功, pid: %d", syscall.Getpid())
+	global.Log.Infof("启动成功, port: %s, pid: %d", global.Config.AppConfig.GinAddr, syscall.Getpid())
 	service.TgSend("启动成功")
 
 	// 平滑优雅关闭服务
@@ -68,8 +67,8 @@ func Init() {
 
 	//关闭监听端口
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown: ", err)
+		global.Log.Fatalln("Server forced to shutdown: ", err)
 	}
-	log.Println("服务关闭!")
+	global.Log.Fatalln("服务关闭!")
 	service.TgSend("程序关闭成功")
 }

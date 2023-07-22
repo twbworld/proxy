@@ -1,13 +1,21 @@
 package global
 
 import (
+	"io"
 	"log"
 	"os"
 
 	"github.com/sirupsen/logrus"
+	"github.com/twbworld/proxy/utils"
 )
 
 func initLog(runLogPath string) {
+
+	err := utils.CreateFile(runLogPath)
+	if err != nil {
+		log.Fatalln("创建文件错误: ", err)
+	}
+
 	Log = logrus.New()
 	Log.SetFormatter(&logrus.JSONFormatter{})
 	Log.SetLevel(logrus.InfoLevel)
@@ -16,5 +24,5 @@ func initLog(runLogPath string) {
 	if err != nil {
 		log.Fatalln("打开文件错误: ", err)
 	}
-	Log.SetOutput(runfile)
+	Log.SetOutput(io.MultiWriter(os.Stdout, runfile)) //同时输出到终端和日志
 }

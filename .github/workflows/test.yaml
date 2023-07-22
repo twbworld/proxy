@@ -1,0 +1,42 @@
+name: test
+on:
+  workflow_dispatch: #github页面手动触发
+  workflow_call: #允许其他workflow调用
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+    services: #容器配置
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: true
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: save-data
+        run: sudo mysql -uroot -h 127.0.0.1 < dao/users.sql
+
+      - name: add-envFile
+        run: sudo cp config/.env.example config/.env
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v ./...

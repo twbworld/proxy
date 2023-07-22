@@ -18,5 +18,5 @@ func Index(ctx *gin.Context) {
 			return
 		}
 	}
-	ctx.String(http.StatusOK, service.V2rayHandle(ctx))
+	ctx.String(http.StatusOK, service.TrojanGoHandle(ctx))
 }

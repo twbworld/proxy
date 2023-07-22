@@ -13,7 +13,8 @@ var (
 )
 
 func Init() {
-	initConfig("config/appConfig.json")
-	initEnv(Config.AppConfig.EnvPath)
+	initConfig()
 	initLog(Config.AppConfig.RunLogPath)
+	initEnv(Config.AppConfig.EnvPath)
+	initTrojanGoConfig(Config.AppConfig.TrojanGoConfigParh)
 }

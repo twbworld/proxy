@@ -1,110 +1,54 @@
-name: ci
+name: main
+
 on:
   workflow_dispatch: #github页面手动触发
   push: #push即触发
-    branches:
-      - main
-    paths-ignore: #不作为触发的文件
-      - '.*'
-      - 'LICENSE'
-      - 'README.md'
-  pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - '.*'
-      - 'LICENSE'
-      - 'README.md'
-  # workflow_run: #workflow执行顺序,当前文件最后执行;必须为默认分支,否则不会触发,好奇怪
-  #   workflows:
-  #     - ci
-  #   branches:
-  #     - main
-  #   types:
-  #     - completed #requested || completed ;上一个"完成才执行下一个"
-
+    tags:
+      - "v*.*"
 jobs:
-  codeql: #github给的默认模板
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
-    env:
-      TZ: Asia/Shanghai
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        language:
-          - go
-    steps:
-    - uses: actions/checkout@v3
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
-      with:
-        languages: ${{ matrix.language }}
+  test:
+    uses: ./.github/workflows/test.yaml
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
-      with:
-        category: "/language:${{matrix.language}}"
-
-  ci:
+  metadata:
     runs-on: ubuntu-latest
-    env:
-      TZ: Asia/Shanghai
+    outputs:
+      image-tags: ${{ steps.extract-metadata.outputs.tags }}
+      image-labels: ${{ steps.extract-metadata.outputs.labels }}
     steps:
-      - uses: actions/checkout@v3
-      - name: restart-mysql #该ubuntu-latest自带mysql8.0
-        run: sudo systemctl restart mysql
-      - name: create-db
-        run: sudo mysqladmin -uroot -proot create trojan
-      - name: save-data
-        run: sudo mysql -uroot -proot trojan < dao/users.sql
-      - name: add-envFile
-        env:
-          ENVDATA: '{"debug": true, "mysql": {"dbname": "trojan", "host": "localhost", "username": "root", "password": "root"}, "superUrl": ["vmess://aa=="], "trojan": [{"domain": "www.domain.com", "port": "443", "wsPath": "/trojan-go-ws/"}], "telegram": {"token": "", "id": 0}}'
-        run: sudo echo $ENVDATA > config/.env
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.20
-      - name: golang testing
-        run: sudo go test -v ./...
+      - id: extract-repo-name
+        run: |
+          repo_name=""
+          if [ -n "$GITHUB_REPOSITORY" ]; then
+              repo_name=${GITHUB_REPOSITORY#*/}
+              repo_name=${repo_name#*/}
+              repo_name=${repo_name#*docker-}
+          fi
+          echo "repo-name=${repo_name}" >> $GITHUB_OUTPUT
 
-  cd:
-    needs: ci
-    runs-on: ubuntu-latest
-    env:
-      TZ: Asia/Shanghai
-    steps:
-      - name: pull-repo
-        uses: appleboy/ssh-action@master
+      - id: extract-metadata
+        if: steps.extract-repo-name.outputs.repo-name && vars.DOCKERHUB_USERNAME
+        uses: docker/metadata-action@v4
         with:
-          host: ${{ vars.HOST }}
-          username: ${{ vars.USERNAME }}
-          key: ${{ secrets.KEY }}
-          port: ${{ vars.PORT }}
-          script: |
-            cd /var/www/html/proxy/
-            git checkout -- .
-            git clean -df
-            git checkout main
-            git fetch origin main
-            git reset --hard origin/main
-      - name: handle-users #按逻辑:这一步骤应该以data/users.json来触发的,但是workflow_run不能使用paths
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ vars.HOST }}
-          username: ${{ vars.USERNAME }}
-          key: ${{ secrets.KEY }}
-          port: ${{ vars.PORT }}
-          script: |
-            docker exec go /bin/bash -c 'go build -o server main.go && ./server -a handle && exit'
-            docker restart go
-            docker exec trojan /bin/bash -c 'systemctl restart trojan && exit'
-            exit
+          images: |
+            ${{ vars.DOCKERHUB_USERNAME }}/${{ steps.extract-repo-name.outputs.repo-name }}
+            ghcr.io/${{ github.repository_owner }}/${{ steps.extract-repo-name.outputs.repo-name }}
+          #设置镜像tag
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+  push-images:
+    needs: [test, metadata]
+    if: needs.metadata.outputs.image-tags
+    uses: ./.github/workflows/push-images.yaml
+    secrets: inherit #传递所有secrets, 被调用的不需要接收
+    with:
+      image-tags: ${{ needs.metadata.outputs.image-tags }}
+      image-labels: ${{ needs.metadata.outputs.image-labels }}
+      dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}

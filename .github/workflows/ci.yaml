@@ -1,0 +1,39 @@
+name: ci
+on:
+  workflow_dispatch: #github页面手动触发
+  workflow_call: #允许其他workflow调用
+  push: #push即触发
+    branches: #分支要写上, 否则上传tags会执行workflow两次
+      - main #!!!!!!!!!!!!!!!!
+    paths-ignore: #不作为触发的文件
+      - '.*'
+      - 'LICENSE'
+      - 'Dockerfile'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '.*'
+      - 'LICENSE'
+      - 'README.md'
+
+jobs:
+
+  test:
+    uses: ./.github/workflows/test.yaml
+
+  review:
+    needs: test
+    uses: ./.github/workflows/review.yml
+    secrets: inherit #传递所有secrets, 被调用的不需要接收
+
+
+  dependency-review:
+    if: github.base_ref != '' || github.head_ref != ''
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/dependency-review-action@v3

@@ -2,15 +2,18 @@ package service
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/utils"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
 func ClashHandle(ctx *gin.Context, f []byte) string {
-	userName := ctx.Query("u")
+	params := regexp.MustCompile(`^/(.*)\.html$`).FindStringSubmatch(ctx.Request.URL.Path)
+	userName := params[1]
 	subscription := ""
 	if len(global.Config.Env.Trojan) > 0 {
 		for _, value := range global.Config.Env.Trojan {
@@ -33,8 +36,9 @@ func ClashHandle(ctx *gin.Context, f []byte) string {
 
 }
 
-func V2rayHandle(ctx *gin.Context) string {
-	userName := ctx.Query("u")
+func TrojanGoHandle(ctx *gin.Context) string {
+	params := regexp.MustCompile(`^/(.*)\.html$`).FindStringSubmatch(ctx.Request.URL.Path)
+	userName := params[1]
 	subscription := ""
 	if len(global.Config.Env.Trojan) > 0 {
 		for _, value := range global.Config.Env.Trojan {

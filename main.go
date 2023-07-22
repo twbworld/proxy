@@ -30,6 +30,6 @@ func main() {
 		log.Println("参数可选: clear|expiry|handle")
 	}
 
-	log.Println("完成")
+	global.Log.Info("完成")
 
 }

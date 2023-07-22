@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 )
@@ -42,4 +44,28 @@ func ListToMap(list interface{}, key string) map[string]interface{} {
 	}
 
 	return res
+}
+
+func CreateFile(path string) (err error) {
+	file, err := os.Open(path)
+	if err != nil && os.IsNotExist(err) {
+		paths, _ := filepath.Split(path)
+
+		_, err = os.Stat(paths)
+		if err != nil {
+			err = os.MkdirAll(paths, os.ModePerm)
+			if err != nil {
+				return
+			}
+		}
+
+		fi, e := os.Create(path)
+		if e != nil {
+			return e
+		}
+		fi.Close()
+	}
+	file.Close()
+
+	return
 }
