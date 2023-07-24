@@ -17,15 +17,13 @@ LABEL org.opencontainers.image.authors="1174865138@qq.com"
 LABEL org.opencontainers.image.description="用于管理翻墙系统用户和订阅"
 LABEL org.opencontainers.image.source="https://github.com/twbworld/proxy"
 WORKDIR /app
-COPY --from=builder /app/config/.env.example /app/config/.env
+COPY --from=builder /app/config/.env.example /app/config/clash.ini /app/config/
 COPY --from=builder /app/dao/users.json /app/dao/
 COPY --from=builder /app/static/ /app/static/
 COPY --from=builder /app/server /app/
 RUN set -xe && \
     chmod +x /app/server && \
     apk add -U --no-cache tzdata ca-certificates && \
-    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    echo "Asia/Shanghai" > /etc/timezone && \
     rm -rf /var/cache/apk/*
 # EXPOSE 8080
 CMD ["./server"]

@@ -4,7 +4,7 @@ on:
   workflow_call: #允许其他workflow调用
   push: #push即触发
     branches: #分支要写上, 否则上传tags会执行workflow两次
-      - main #!!!!!!!!!!!!!!!!
+      - main
     paths-ignore: #不作为触发的文件
       - '.*'
       - 'LICENSE'
