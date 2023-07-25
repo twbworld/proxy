@@ -1,7 +1,6 @@
 package global
 
 import (
-	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -75,7 +74,6 @@ func initTrojanGoConfig(configPath string) {
 				}
 			}
 		}
-		log.Println(Config.TrojanGoConfig)
 		return
 	}
 
