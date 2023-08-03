@@ -13,6 +13,7 @@ type Telegram struct{
 
 type Env struct{
 	Debug bool `json:"debug" mapstructure:"debug" info:"项目环境"`
+	Domain string `json:"domain" mapstructure:"domain" info:"项目域名,端口默认80, webhook需要"`
 	SuperUrl []string `json:"superUrl" mapstructure:"superUrl" info:"除trojan外的连接"`
 	Trojan []Trojan `json:"trojan" mapstructure:"trojan" info:"可配置多个trojan地址"`
 	Telegram Telegram `json:"telegram" mapstructure:"telegram" info:"Telegram聊天室配置"`

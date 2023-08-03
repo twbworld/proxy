@@ -25,6 +25,7 @@ func Hash(str string) string {
 	return hex.EncodeToString(b[:])
 }
 
+// 类似php的array_column($a, null, 'key')
 func ListToMap(list interface{}, key string) map[string]interface{} {
 
 	v := reflect.ValueOf(list)

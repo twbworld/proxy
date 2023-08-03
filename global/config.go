@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-
 func initConfig() {
 	struType := reflect.TypeOf(Config.AppConfig)
 	struValue := reflect.ValueOf(&Config.AppConfig).Elem()
@@ -20,7 +19,6 @@ func initConfig() {
 		}
 	}
 }
-
 
 func initEnv(configPath string) {
 	// 初始化 viper
@@ -58,7 +56,6 @@ func initTrojanGoConfig(configPath string) {
 			struVal.SetString(struType.Field(i).Tag.Get("default")) //参数初始化
 		}
 	}
-
 
 	// 初始化 viper
 	v := viper.New()

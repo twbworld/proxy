@@ -1,8 +1,10 @@
 package controller
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
+
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/service"
 
@@ -19,4 +21,14 @@ func Index(ctx *gin.Context) {
 		}
 	}
 	ctx.String(http.StatusOK, service.TrojanGoHandle(ctx))
+}
+
+func Tg(ctx *gin.Context) {
+	if err := service.TgWebhookHandle(ctx); err != nil {
+		errMsg, _ := json.Marshal(map[string]string{"error": err.Error()})
+		ctx.Writer.WriteHeader(http.StatusBadRequest)
+		ctx.Writer.Header().Set("Content-Type", "application/json")
+		_, _ = ctx.Writer.Write(errMsg)
+		return
+	}
 }

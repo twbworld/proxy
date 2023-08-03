@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w" -o server . && \
-    mv config/.env.example config/clash.ini dao/users.json server /app/static
+    mv config/.env.example config/clash.ini server /app/static
 
 
 ##打包镜像
@@ -23,11 +23,10 @@ RUN set -xe && \
     mkdir -p dao config && \
     mv static/.env.example config/.env && \
     mv static/clash.ini config && \
-    mv static/users.json dao && \
     mv static/server server && \
     chmod +x server && \
     # sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
     apk add -U --no-cache tzdata ca-certificates && \
     rm -rf /var/cache/apk/*
-# EXPOSE 8080
+# EXPOSE 80
 ENTRYPOINT ["./server"]

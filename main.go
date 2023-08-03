@@ -11,7 +11,7 @@ import (
 func main() {
 
 	var act string
-	flag.StringVar(&act, "a", "", `行为,默认为空,即启动服务; "clear": 清除上下行流量记录; "expiry": 处理过期用户; "handle": 更新用户`)
+	flag.StringVar(&act, "a", "", `行为,默认为空,即启动服务; "clear": 清除上下行流量记录; "expiry": 处理过期用户`)
 	flag.Parse()
 
 	global.Init()
@@ -24,10 +24,8 @@ func main() {
 		initialize.Clear()
 	case "expiry":
 		initialize.Expiry()
-	case "handle":
-		initialize.Handle()
 	default:
-		log.Println("参数可选: clear|expiry|handle")
+		log.Println("参数可选: clear|expiry")
 	}
 
 	global.Log.Info("完成")

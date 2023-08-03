@@ -37,7 +37,7 @@ func TestMain(t *testing.T) {
 	for _, value := range testCases{
 
 		t.Run(value.name, func(t *testing.T){
-			req, err := http.NewRequest(http.MethodGet, "http://localhost:8080/" + value.input + ".html", nil)
+			req, err := http.NewRequest(http.MethodGet, "http://localhost:80/" + value.input + ".html", nil)
 			if err != nil {
 				log.Fatalf("报错: %v", err)
 			}
