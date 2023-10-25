@@ -4,6 +4,7 @@ type Trojan struct{
 	Domain string `json:"domain" mapstructure:"domain" info:"域名"`
 	Port string `json:"port" mapstructure:"port" info:"端口"`
 	WsPath string `json:"wsPath" mapstructure:"wsPath" info:"WebSocket路径"`
+	Root bool `json:"root" mapstructure:"root" info:"是否管理员(quota=-1)用户使用"`
 }
 
 type Telegram struct{

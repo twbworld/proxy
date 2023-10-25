@@ -2,10 +2,11 @@ package controller
 
 import (
 	"encoding/json"
+	"github.com/twbworld/proxy/dao"
+	"github.com/twbworld/proxy/model"
 	"net/http"
-	"os"
+	"regexp"
 
-	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/service"
 
 	"github.com/gin-gonic/gin"
@@ -13,14 +14,18 @@ import (
 
 func Index(ctx *gin.Context) {
 	// ctx.Header("content-type", "text/html; charset=UTF-8")
+
+	params := regexp.MustCompile(`^/(.*)\.html$`).FindStringSubmatch(ctx.Request.URL.Path)
+	var user model.Users
+	dao.GetUsersByUserName(&user, params[1])
+
 	if ctx.Request.Host[:5] == "clash" {
-		f, err := os.ReadFile(global.Config.AppConfig.ClashPath)
-		if err == nil && len(f) > 1 {
-			ctx.String(http.StatusOK, service.ClashHandle(ctx, f))
+		if res := service.ClashHandle(&user); res != "" {
+			ctx.String(http.StatusOK, res)
 			return
 		}
 	}
-	ctx.String(http.StatusOK, service.TrojanGoHandle(ctx))
+	ctx.String(http.StatusOK, service.TrojanGoHandle(&user))
 }
 
 func Tg(ctx *gin.Context) {
