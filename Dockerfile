@@ -1,5 +1,5 @@
 ##编译
-FROM --platform=$TARGETPLATFORM golang:1.20-alpine AS builder
+FROM --platform=$TARGETPLATFORM golang:1.21-alpine AS builder
 WORKDIR /app
 ARG TARGETARCH
 ENV GO111MODULE=on
