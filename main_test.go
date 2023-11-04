@@ -24,8 +24,8 @@ func TestMain(t *testing.T) {
 		input string
 		res string
 	}{
-		{name: "successTest", status: http.StatusOK, input: "test", res: "trojan://"},
-		{name: "failTest", status: http.StatusMovedPermanently, input: "aa", res: "<a href=\""},
+		{name: "successTest", status: http.StatusOK, input: "test", res: "vless://"},
+		{name: "failTest", status: http.StatusMovedPermanently, input: "aa", res: "<a href="},
 	}
 
 	dao.InitMysql()
@@ -55,7 +55,7 @@ func TestMain(t *testing.T) {
 
 			defer result.Body.Close()
 
-			assert.Equal(t, value.res, utils.Base64Decode(string(resB))[:9])
+			assert.Equal(t, value.res, utils.Base64Decode(string(resB))[:8])
 
 		})
 
