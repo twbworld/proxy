@@ -46,7 +46,7 @@ func setDefaultValue(value *config.Proxy) {
 		//如果套cdn,则避免host不等于server(使用了优选ip)
 		domain = value.WsOpts.Headers.Host
 	}
-	value.Name = "外网信息复杂_理智分辨真假" + "_" + domain + "_" + value.Port
+	value.Name = "外网信息复杂_理智分辨真假" + "_" + value.Server + "_" + value.Port
 	value.Tls = true
 	value.Udp = true
 	value.SkipCertVerify = false
