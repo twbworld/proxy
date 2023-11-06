@@ -9,16 +9,17 @@
 ## 简介
 **翻墙订阅链接服务 和 用户管理**
 
-> 本项目配合 [trojan-go](https://github.com/p4gefau1t/trojan-go) 使用, 并使用到其规定的数据库
+> 本项目配合 [trojan-go](https://github.com/p4gefau1t/trojan-go) 的数据库进行用户管理, 后期会改用原本xray的grpc管理用户
+> 翻墙服务端端建议使用xray
 
 ### 本项目有两个作用:
 
 1. 用户管理(增删改查)
-    > 程序作为中间人, 通过与`telegram-bot`进行交互,实现对接[trojan-go](https://github.com/p4gefau1t/trojan-go)数据库, 从而进行用户管理  
+    > 程序作为中间人, 通过与`telegram-bot`进行交互,实现对接用户数据库, 进行用户管理  
     > 如喜欢用文件而不是`telegram-bot`进行用户管理, 请使用`v0`版本  
     > 如喜欢用shell进行用户管理, 建议出门左转使用[Jrohy/trojan](https://github.com/Jrohy/trojan)哟
 2. 程序返回客户端可识别的翻墙配置, 即订阅功能
-    > 访问含用户名的特定订阅链接, 程序返回`trojan-go`和`v2ray`客户端可以识别的base64码或`clash`可识别配置文件; 在客户端上配置订阅链接即可翻墙;
+    > 访问含用户名的特定订阅链接, 程序返回`v2ray`和`clash`等客户端可以识别的base64码或`clash`配置文件; 在客户端上配置订阅链接即可翻墙;
 
 ## 目录结构 : 
 ``` sh
@@ -38,7 +39,7 @@
 ├── config/
 │   ├── appConfig.go    #项目配置
 │   ├── clash.ini       #clash配置模板
-│   ├── .trojan-go       #trojan-go配置文件,需自行新增
+│   ├── .trojan-go       #数据库的配置文件,需自行新增
 │   ├── config.go
 │   ├── trojanGoConfig.go #trojan-go配置
 │   ├── .env            #机密配置文件,数据库之类的
@@ -82,8 +83,8 @@
 ```
 
 ## 准备
-* 请准备数据库, 点击查看[数据库结构](https://github.com/twbworld/proxy/blob/main/dao/db.sql); 如已安装 [trojan-go](https://github.com/p4gefau1t/trojan-go) 及其 [数据库](https://p4gefau1t.github.io/trojan-go/basic/full-config/#mysql数据库选项),则自行新增余下的表
-* 配置数据库有两种方式; 为了与`trojan-go`使用同一个数据库,程序首先会识别config目录下是否存在名为`.trojan-go`的trojan-go配置文件, 如果文件不存在, 则读取相关环境变量, 如下
+* 请准备数据库, 点击查看[数据库结构](https://github.com/twbworld/proxy/blob/main/dao/db.sql); 如已安装 [数据库](https://p4gefau1t.github.io/trojan-go/basic/full-config/#mysql数据库选项),则自行新增余下的表
+* 配置数据库有两种方式; 程序首先会识别config目录下是否存在名为`.trojan-go`的数据库配置文件, 如果文件不存在, 则读取相关环境变量, 如下
     ### 环境变量参数
     |  变量值   |  解释  | 默认 |
     |  ----  | ----  | ---- |
@@ -94,7 +95,7 @@
     | MYSQL_PASSWORD  | 密码 | "" |
 * 自行创建`telegram-bot`, 将token/id/domain信息配置到`config/.env`
 * 配置订阅相关信息: `config/.env`
-  > 配置文件下的`trojan`配置`Port`为443时, 默认域名使用cdn, 程序返回的配置使用`WebSocket`协议, 请看[service/index.go](https://github.com/twbworld/proxy/blob/main/service/index.go)代码
+
 * 配置监听端口等信息: `config/trojanGoConfig.go`
 
 
@@ -110,18 +111,18 @@ services:
             MYSQL_ALLOW_EMPTY_PASSWORD: true
         volumes:
             - ${PWD}/dao/db.sql:/docker-entrypoint-initdb.d/db.sql:ro
-    trojan-go:
-        image: p4gefau1t/trojan-go:latest
+    xray:
+        image: ghcr.io/xtls/xray-core:latest
         depends_on:
             - mysql
         ports:
             - 443:443
         volumes:
-            - ${PWD}/trojan-go.json:/etc/trojan-go/config.json:rw
+            - xray_config.json:/etc/xray/config.json:rw
 
     proxy:
         image: ghcr.io/twbworld/proxy:latest
-        container_name: trojan
+        container_name: proxy
         depends_on:
         - mysql
         ports:
@@ -131,7 +132,7 @@ services:
         #     MYSQL_DBNAME: trojan
         volumes:
             - ${PWD}/config/.env.example:/app/config/.env:ro
-            - ${PWD}/trojan-go.json:config/.trojan-go:rw #需要用到trojan-go配置文件下的mysql配置
+            - ${PWD}/trojan-go.json:config/.trojan-go:rw #mysql配置
 ```
 
 ### 打包本地运行
@@ -154,21 +155,21 @@ $ ./server
 
 ### 流量上下行的记录清零
 ```sh
-$ docker exec -it trojan /app/server -a clear
+$ docker exec -it proxy /app/server -a clear
 或
 $ ./server -a clear
 ```
 
 ### 过期用户处理
 ```sh
-$ docker exec -it trojan /app/server -a expiry
+$ docker exec -it proxy /app/server -a expiry
 或
 $ ./server -a expiry
 ```
 
 
 ### 客户端订阅
-* `trojan-go`和`v2ray`订阅地址例子: `trojan.domain.com/username.html`
+* `v2ray`订阅地址例子: `www.domain.com/username.html`
 * `clash`订阅地址例子: `clash.domain.com/username.html`
     > `clash`与前两者不同, 其识别的是配置文件, 所以clash需不同的网址, 且以clash开头的域名, 请自行解析域名, 而前两者则不要求;[相关代码](https://github.com/twbworld/proxy/blob/main/controller/index.go)
-> 提示: 这个客户端使用的`订阅域名`, 跟`连接trojan-go的域名`是不一样哦; 可以理解为: 利用`订阅域名`获取连接信息, 这些连接信息就包含了用于连接trojan-go服务的域名;
+> 提示: 这个客户端使用的`订阅域名`, 跟`连接xray等服务端的域名`是不一样哦; 可以理解为: 利用`订阅域名`获取连接信息, 这些连接信息就包含了用于连接xray服务的域名;

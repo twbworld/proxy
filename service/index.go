@@ -41,14 +41,19 @@ func checkUser(user *model.Users) bool {
 }
 
 func setDefaultValue(value *config.Proxy) {
-	value.Name = "外网信息复杂_理智分辨真假" + "_" + value.Server + "_" + value.Port
+	domain := value.Server
+	if value.WsOpts.Headers.Host != "" {
+		//如果套cdn,则避免host不等于server(使用了优选ip)
+		domain = value.WsOpts.Headers.Host
+	}
+	value.Name = "外网信息复杂_理智分辨真假" + "_" + domain + "_" + value.Port
 	value.Tls = true
 	value.Udp = true
 	value.SkipCertVerify = false
 	value.ClientFingerprint = "chrome"
 	value.Alpn = []string{"h2", "http/1.1"}
-	value.Sni = value.Server
-	value.WsOpts.Headers.Host = value.Server
+	value.Sni = domain
+	value.WsOpts.Headers.Host = domain
 }
 
 func getClashConfig(value *config.Proxy) any {
