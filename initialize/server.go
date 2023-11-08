@@ -26,7 +26,8 @@ func Init() {
 	if err != nil {
 		global.Log.Fatalln("打开文件错误: ", err)
 	}
-	gin.DefaultWriter = io.MultiWriter(ginfile)
+	gin.DefaultWriter = io.MultiWriter(ginfile) //记录所有日志
+	gin.DefaultErrorWriter = global.Log.Out
 
 	mode := gin.ReleaseMode
 	if global.Config.Env.Debug {
@@ -58,7 +59,10 @@ func Init() {
 	service.TgSend("启动成功")
 
 	<-ctx.Done() //阻塞等待
+
 	//来到这 证明有关闭指令,将进行平滑优雅关闭服务
+
+	global.Log.Infof("程序关闭中..., port: %s, pid: %d", global.Config.AppConfig.GinAddr, syscall.Getpid())
 
 	stop()
 
