@@ -17,6 +17,7 @@ import (
 
 func Init(ginServer *gin.Engine) {
 	ginServer.StaticFile("/favicon.ico", "static/favicon.ico")
+	ginServer.StaticFile("/robots.txt", "static/robots.txt")
 	ginServer.LoadHTMLGlob("static/*.html")
 
 	ginServer.NoRoute(func(ctx *gin.Context) {
