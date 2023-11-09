@@ -5,6 +5,7 @@ on:
   push: #push即触发
     branches: #分支要写上, 否则上传tags会执行workflow两次
       - main
+      - dev
     paths-ignore: #不作为触发的文件
       - '.*'
       - 'LICENSE'
@@ -12,6 +13,7 @@ on:
   pull_request:
     branches:
       - main
+      - dev
     paths-ignore:
       - '.*'
       - 'LICENSE'
