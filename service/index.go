@@ -25,6 +25,7 @@ type clashVlessVision struct {
 }
 type clashVlessWs struct {
 	*config.Proxy
+	Alpn        int `json:"alpn,omitempty" mapstructure:"alpn"` //Shadowrocket下vless+ws不支持Alpn
 	RealityOpts int `json:"reality-opts,omitempty" mapstructure:"reality-opts"`
 }
 
@@ -104,7 +105,6 @@ func getConfig(value *config.Proxy) string {
 
 	if value.Type == "vless" && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "" {
 		// VLESS-TCP-TLS-WS
-		link += "&alpn=" + strings.Join(value.Alpn, ",")
 		link += "&host=" + value.WsOpts.Headers.Host
 		link += "&path=" + value.WsOpts.Path
 		link += "&security=tls"
