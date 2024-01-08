@@ -22,7 +22,7 @@ on:
         type: string
       platforms:
         description: '构建镜像平台'
-        default: 'linux/amd64,linux/arm64/v8'
+        default: 'linux/amd64,linux/arm64'
         required: false
         type: string
 

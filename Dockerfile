@@ -1,5 +1,5 @@
 ##编译
-FROM --platform=$TARGETPLATFORM golang:1.21-alpine AS builder
+FROM --platform=$TARGETPLATFORM golang:1.21 AS builder
 WORKDIR /app
 ARG TARGETARCH
 ENV GO111MODULE=on
@@ -7,7 +7,8 @@ ENV GO111MODULE=on
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w" -o server . && \
+#go-sqlite3需要cgo编译; 且使用完全静态编译, 否则需依赖外部安装的glibc
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -ldflags "-s -w --extldflags '-static -fpic'" -o server . && \
     mv config/.env.example config/clash.ini server /app/static
 
 
@@ -26,7 +27,9 @@ RUN set -xe && \
     mv static/server server && \
     chmod +x server && \
     # sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
+    apk update && \
     apk add -U --no-cache tzdata ca-certificates && \
+    apk cache clean && \
     rm -rf /var/cache/apk/*
 # EXPOSE 80
 ENTRYPOINT ["./server"]
