@@ -24,8 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: save-data
-        run: sudo mysql -uroot -h 127.0.0.1 < dao/db.sql
+      # - name: save-data
+      #   run: sudo mysql -uroot -h 127.0.0.1 < dao/db.sql
 
       - name: add-envFile
         run: sudo cp config/.env.example config/.env

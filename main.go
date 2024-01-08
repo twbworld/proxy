@@ -15,7 +15,11 @@ func main() {
 	flag.Parse()
 
 	global.Init()
-	dao.InitMysql()
+
+	dao.Init()
+	defer func() {
+		dao.Close()
+	}()
 
 	switch act {
 	case "":

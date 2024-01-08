@@ -9,9 +9,6 @@
 ## 简介
 **翻墙订阅链接服务 和 用户管理**
 
-> 本项目配合 [trojan-go](https://github.com/p4gefau1t/trojan-go) 的数据库进行用户管理, 后期会改用原本xray的grpc管理用户
-> 翻墙服务端端建议使用xray
-
 ### 本项目有两个作用:
 
 1. 用户管理(增删改查)
@@ -39,18 +36,15 @@
 ├── config/
 │   ├── appConfig.go    #项目配置
 │   ├── clash.ini       #clash配置模板
-│   ├── .trojan-go       #数据库的配置文件,需自行新增
 │   ├── config.go
-│   ├── trojanGoConfig.go #trojan-go配置
 │   ├── .env            #机密配置文件,数据库之类的
 │   ├── .env.example    #配置模板
 │   └── env.go
 ├── controller/         #MVC模式的C
 │   └── index.go
 ├── dao/
-│   ├── db_handle.go    #用户数据操作
-│   ├── mysql.go
-│   └── db.sql       #数据库文件
+│   ├── db.go          #数据库初始化
+│   └── dbHandle.go    #用户数据操作
 ├── global/
 │   ├── app.go          #全局变量的初始化
 │   ├── config.go
@@ -68,8 +62,7 @@
 ├── main.go             #入口
 ├── model/
 │   ├── users.go
-│   ├── system_info.go
-│   └── usersJson.go
+│   └── systemInfo.go
 ├── router/
 │   └── router.go       #gin路由
 ├── server
@@ -83,21 +76,11 @@
 ```
 
 ## 准备
-* 请准备数据库, 点击查看[数据库结构](https://github.com/twbworld/proxy/blob/main/dao/db.sql); 如已安装 [数据库](https://p4gefau1t.github.io/trojan-go/basic/full-config/#mysql数据库选项),则自行新增余下的表
-* 配置数据库有两种方式; 程序首先会识别config目录下是否存在名为`.trojan-go`的数据库配置文件, 如果文件不存在, 则读取相关环境变量, 如下
-    ### 环境变量参数
-    |  变量值   |  解释  | 默认 |
-    |  ----  | ----  | ---- |
-    | MYSQL_HOST  | 地址 | "127.0.0.1" |
-    | MYSQL_PORT  | 端口 | "3306" |
-    | MYSQL_DBNAME  | 库名 | "trojan" |
-    | MYSQL_USERNAME  | 用户名 | "root" |
-    | MYSQL_PASSWORD  | 密码 | "" |
-* 自行创建`telegram-bot`, 将token/id/domain信息配置到`config/.env`
-* 配置订阅相关信息: `config/.env`
-
-* 配置监听端口等信息: `config/trojanGoConfig.go`
-
+* 请准备数据库(默认使用sqlite, 没有db文件则自动在dao目录下新增proxy.db文件, 数据库结构参考`dao/db.go`), 并配置`config/.env` db选项, 可用mysql, 甚至直接配置trojan-go的mysql数据库, 参考 `config/.env.example`
+* 自行创建`telegram-bot`, 将token/id/domain信息配置到`config/.env`, 可实现tg交互管理用户
+* 配置监听端口(默认80)等信息: `config/appConfig.go`
+* 建议使用的xray很难做用户管理, 故项目不依赖其数据而是外置数据库, 缺点是不能利用xray的流量统计功能(使用trojan-go和其数据库, 则流量统计可用); 未来会对接xray数据, 也许吧!
+* 未来支持环境变量配置, 也许吧!
 
 ## 安装
 
@@ -105,41 +88,18 @@
 ``` yaml
 version: "3"
 services:
-    mysql:
-        image: mysql:8.0
-        environment:
-            MYSQL_ALLOW_EMPTY_PASSWORD: true
-        volumes:
-            - ${PWD}/dao/db.sql:/docker-entrypoint-initdb.d/db.sql:ro
-    xray:
-        image: ghcr.io/xtls/xray-core:latest
-        depends_on:
-            - mysql
-        ports:
-            - 443:443
-        volumes:
-            - xray_config.json:/etc/xray/config.json:rw
-
     proxy:
         image: ghcr.io/twbworld/proxy:latest
-        container_name: proxy
-        depends_on:
-        - mysql
         ports:
             - 80:80
-        # environment:
-        #     MYSQL_HOST: mysql
-        #     MYSQL_DBNAME: trojan
         volumes:
-            - ${PWD}/config/.env.example:/app/config/.env:ro
-            - ${PWD}/trojan-go.json:config/.trojan-go:rw #mysql配置
+            - ${PWD}/config/.env:/app/config/.env:ro
+            - ${PWD}/dao/proxy.db:dao/proxy.db:rw
 ```
 
 ### 打包本地运行
 ```sh
 $ cp config/.env.example config/.env
-
-$ cp trojan-go.json config/.trojan-go
 
 $ go mod tidy && go build -o server main.go
 
@@ -170,6 +130,7 @@ $ ./server -a expiry
 
 ### 客户端订阅
 * `v2ray`订阅地址例子: `www.domain.com/username.html`
+  > 其中`www.domain.com`是自己的域名,指向该项目监听的端口; `username`是用户名, 如果数据库中存在该用户, 则显示在`config/.env`下`proxy`选项所配置的vpn信息
 * `clash`订阅地址例子: `clash.domain.com/username.html`
-    > `clash`与前两者不同, 其识别的是配置文件, 所以clash需不同的网址, 且以clash开头的域名, 请自行解析域名, 而前两者则不要求;[相关代码](https://github.com/twbworld/proxy/blob/main/controller/index.go)
+    > `clash`与前两者不同, 其识别的是配置文件, 所以clash需不同的网址, 且以clash开头的域名, 请自行解析域名;[相关代码](https://github.com/twbworld/proxy/blob/main/controller/index.go)
 > 提示: 这个客户端使用的`订阅域名`, 跟`连接xray等服务端的域名`是不一样哦; 可以理解为: 利用`订阅域名`获取连接信息, 这些连接信息就包含了用于连接xray服务的域名;

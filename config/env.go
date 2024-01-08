@@ -30,6 +30,16 @@ type Proxy struct {
 	Root              bool        `json:"root,omitempty" mapstructure:"root" info:"是否管理员(quota=-1)用户使用"`
 }
 
+type Db struct {
+	Type          string `default:"sqlite" json:"type" mapstructure:"type" env:"DB_TYPE" info:"数据库类型"`
+	SqlitePath    string `default:"./dao/proxy.db" json:"sqlite_path" mapstructure:"sqlite_path" env:"SQLITE_PATH" info:"sqlite文件路径"`
+	MysqlHost     string `json:"mysql_host" mapstructure:"mysql_host" env:"MYSQL_HOST" info:"地址"`
+	MysqlPort     string `json:"mysql_port" mapstructure:"mysql_port" env:"MYSQL_PORT" info:"端口"`
+	MysqlDbname   string `json:"mysql_dbname" mapstructure:"mysql_dbname" env:"MYSQL_DBNAME" info:"数据库名"`
+	MysqlUsername string `json:"mysql_username" mapstructure:"mysql_username" env:"MYSQL_USERNAME" info:"用户名"`
+	MysqlPassword string `json:"mysql_password" mapstructure:"mysql_password" env:"MYSQL_PASSWORD" info:"密码"`
+}
+
 type Telegram struct {
 	Token string `json:"token" mapstructure:"token" info:"BotFather新建的聊天室"`
 	Id    int64  `json:"id" mapstructure:"id" info:"userinfobot获取"`
@@ -39,5 +49,6 @@ type Env struct {
 	Debug    bool     `json:"debug" mapstructure:"debug" info:"项目环境"`
 	Domain   string   `json:"domain" mapstructure:"domain" info:"项目域名,端口默认80, webhook需要"`
 	Proxy    []Proxy  `json:"proxy" mapstructure:"proxy" info:"代理配置"`
+	Db       Db       `json:"db" mapstructure:"db" info:"数据库配置"`
 	Telegram Telegram `json:"telegram" mapstructure:"telegram" info:"Telegram聊天室配置"`
 }

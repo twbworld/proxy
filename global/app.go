@@ -18,5 +18,4 @@ func Init() {
 	initConfig()
 	initLog(Config.AppConfig.RunLogPath)
 	initEnv(Config.AppConfig.EnvPath)
-	initTrojanGoConfig(Config.AppConfig.TrojanGoConfigParh)
 }

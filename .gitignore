@@ -78,5 +78,4 @@ ehthumbs_vista.db
 /tests/report/*
 tmp/
 /server
-/config/.trojan-go
 !.gitkeep

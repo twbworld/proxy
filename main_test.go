@@ -28,7 +28,11 @@ func TestMain(t *testing.T) {
 		{name: "failTest", status: http.StatusMovedPermanently, input: "aa", res: "<a href="},
 	}
 
-	dao.InitMysql()
+	dao.Init()
+	defer func() {
+		dao.Close()
+	}()
+
 	ginServer := gin.Default()
 	router.Init(ginServer)
 

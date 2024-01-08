@@ -30,6 +30,9 @@ func TgSend(text string) (err error) {
 }
 
 func TgWebhookClear() {
+	if global.Bot == nil {
+		return
+	}
 	global.Bot.Request(tg.DeleteWebhookConfig{})
 }
 

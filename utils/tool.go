@@ -70,3 +70,12 @@ func CreateFile(path string) (err error) {
 
 	return
 }
+
+func InSlice(slice *[]string, value string) int {
+	for i, item := range *slice {
+		if item == value {
+			return i
+		}
+	}
+	return -1
+}
