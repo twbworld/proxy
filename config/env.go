@@ -22,7 +22,7 @@ type Proxy struct {
 	ClientFingerprint string      `default:"chrome" json:"client-fingerprint" mapstructure:"client-fingerprint" info:"utls指纹(如chrome/safari)"`
 	Alpn              []string    `json:"alpn" mapstructure:"alpn" info:"alpn"`
 	Sni               string      `json:"sni" mapstructure:"sni" info:"sni域名"`
-	Uuid              string      `json:"uuid" mapstructure:"uuid" info:"用户ID"`
+	Uuid              string      `json:"uuid" mapstructure:"uuid" info:"用户ID或trojan的password"`
 	Flow              string      `json:"flow" mapstructure:"flow" info:"流控类型"`
 	Network           string      `default:"tcp" json:"network" mapstructure:"network" info:"传输协议(如tcp/ws/grpc)"`
 	RealityOpts       RealityOpts `json:"reality-opts" mapstructure:"reality-opts" info:"Reality协议配置"`

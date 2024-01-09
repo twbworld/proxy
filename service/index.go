@@ -27,8 +27,20 @@ type clashVlessWs struct {
 	*config.Proxy
 	RealityOpts int `json:"reality-opts,omitempty" mapstructure:"reality-opts"`
 }
+type clashTrojanWs struct {
+	*config.Proxy
+	RealityOpts int    `json:"reality-opts,omitempty" mapstructure:"reality-opts"`
+	Password    string `json:"password" mapstructure:"password"`
+}
+type clashTrojan struct {
+	*config.Proxy
+	RealityOpts int    `json:"reality-opts,omitempty" mapstructure:"reality-opts"`
+	WsOpts      int    `json:"ws-opts,omitempty" mapstructure:"ws-opts"`
+	Password    string `json:"password" mapstructure:"password"`
+	Uuid        string `json:"uuid,omitempty" mapstructure:"uuid" info:"用户ID或trojan的password"`
+}
 
-//检测过期
+// 检测过期
 func checkUser(user *model.Users) bool {
 	if *user.ExpiryDate == "" || *user.ExpiryDate == "0" {
 		return true
@@ -73,9 +85,20 @@ func getClashConfig(value *config.Proxy) any {
 		return clashVlessVision{
 			Proxy: value,
 		}
+	} else if value.Type == "trojan" && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "" {
+		// TROJAN-TCP-TLS-WS
+		trojan := clashTrojanWs{
+			Proxy: value,
+		}
+		trojan.Password = value.Uuid
+		return trojan
 	} else if value.Type == "trojan" {
-		// trojan
-		return nil
+		// TROJAN-TCP-TLS
+		trojan := clashTrojan{
+			Proxy: value,
+		}
+		trojan.Password = value.Uuid
+		return trojan
 	}
 	return nil
 }
@@ -102,8 +125,8 @@ func getConfig(value *config.Proxy) string {
 	link += "&fp=" + value.ClientFingerprint
 	link += "&type=" + value.Network
 
-	if value.Type == "vless" && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "" {
-		// VLESS-TCP-TLS-WS
+	if (value.Type == "vless" || value.Type == "trojan") && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "" {
+		// VLESS-TCP-TLS-WS || TROJAN-TCP-TLS-WS
 		link += "&alpn=" + strings.Join(value.Alpn, ",")
 		link += "&host=" + value.WsOpts.Headers.Host
 		link += "&path=" + value.WsOpts.Path
@@ -120,8 +143,9 @@ func getConfig(value *config.Proxy) string {
 		link += "&flow=" + value.Flow
 		link += "&security=tls"
 	} else if value.Type == "trojan" {
-		// trojan
-		return ""
+		// TROJAN-TCP-TLS
+		link += "&alpn=" + strings.Join(value.Alpn, ",")
+		link += "&security=tls"
 	}
 
 	return link + "#" + value.Name
