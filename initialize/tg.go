@@ -16,8 +16,6 @@ func TgInit() {
 		return
 	}
 	global.Bot = bot
-	global.Log.Printf("Authorized on account %s", global.Bot.Self.UserName)
-
 	global.Bot.Debug = global.Config.Env.Debug
 
 	setCommands := tg.NewSetMyCommands(tg.BotCommand{
@@ -45,5 +43,6 @@ func TgInit() {
 			global.Log.Warn("Telegram callback failed[fosdjfoisj]: ", info.LastErrorMessage)
 			return
 		}
+		global.Log.Printf("成功配置tg[doiasjo]: %s", global.Bot.Self.UserName)
 	}
 }

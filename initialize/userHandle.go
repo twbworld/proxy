@@ -13,7 +13,7 @@ func Clear() {
 
 	tx, err := dao.DB.Beginx()
 	if err != nil {
-		global.Log.Fatalln("开启事务失败[ijhdfakkaop]: ", err)
+		global.Log.Panicln("开启事务失败[ijhdfakkaop]: ", err)
 	}
 
 	defer func() {
@@ -30,7 +30,7 @@ func Clear() {
 
 	err = dao.UpdateUsersClear(tx)
 	if err != nil {
-		global.Log.Fatalln("清除失败[gpodk]: ", err)
+		global.Log.Panicln("清除失败[gpodk]: ", err)
 	}
 }
 
@@ -45,7 +45,7 @@ func Expiry() {
 	err := dao.GetUsers(&users, "`quota` != 0 AND `useDays` != 0")
 
 	if err != nil {
-		global.Log.Fatalln("查询失败[fsuojnv]: ", err)
+		global.Log.Panicln("查询失败[fsuojnv]: ", err)
 	}
 
 	if len(users) < 1 {
@@ -55,11 +55,11 @@ func Expiry() {
 
 	tz, err := time.LoadLocation("Asia/Shanghai")
 	if err != nil {
-		global.Log.Fatalln("时区设置错误[pgohkf]: ", err)
+		global.Log.Panicln("时区设置错误[pgohkf]: ", err)
 	}
 	t, err := time.Parse(time.DateTime, time.Now().In(tz).Format(time.DateOnly+" 00:00:01"))
 	if err != nil {
-		global.Log.Fatalln("时间出错[djaksofja]: ", err)
+		global.Log.Panicln("时间出错[djaksofja]: ", err)
 	}
 	t1 := time.Now().In(tz).AddDate(0, 0, -7)
 	t2 := time.Now().In(tz).AddDate(0, 0, -5)
@@ -89,7 +89,7 @@ func Expiry() {
 
 	tx, err := dao.DB.Beginx()
 	if err != nil {
-		global.Log.Fatalln("开启事务失败: ", err)
+		global.Log.Panicln("开启事务失败: ", err)
 	}
 
 	defer func() {
@@ -106,7 +106,7 @@ func Expiry() {
 
 	err = dao.UpdateUsersExpiry(ids, tx)
 	if err != nil {
-		global.Log.Fatalln("更新失败[fofiwjm]: ", err)
+		global.Log.Panicln("更新失败[fofiwjm]: ", err)
 	}
 
 	global.Log.Info("过期用户处理: ", ids)

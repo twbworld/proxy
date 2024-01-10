@@ -50,7 +50,7 @@ func initEnv(configPath string) {
 
 	// 将配置赋值给全局变量
 	if err := v.Unmarshal(&Config.Env); err != nil {
-		Log.Fatalln(err)
+		Log.Panicln(err)
 	}
 
 }
