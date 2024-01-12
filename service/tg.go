@@ -321,7 +321,7 @@ func actionType(update *tg.Update, act string, userId uint) error {
 	case "user_update":
 		ikb := tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
-				tg.NewInlineKeyboardButtonData("限流", fmt.Sprintf("user_update@%d@%s", user.Id, "quota")),
+				// tg.NewInlineKeyboardButtonData("限流", fmt.Sprintf("user_update@%d@%s", user.Id, "quota")),
 				tg.NewInlineKeyboardButtonData("到期", fmt.Sprintf("user_update@%d@%s", user.Id, "expiryDate")),
 			),
 		)
@@ -456,12 +456,13 @@ SEND2:
 	return nil
 }
 func getUserMarkdownV2Text(user *model.Users) string {
-	quota := "不限"
-	if user.Quota != -1 {
-		quota = fmt.Sprintf("%.1f", float64(user.Quota)/dao.QuotaMax) + "G"
-	}
-	download := fmt.Sprintf("%.1f", float64(user.Download)/dao.QuotaMax)
-	upload := fmt.Sprintf("%.1f", float64(user.Upload)/dao.QuotaMax)
-	text := fmt.Sprintf("账号: `%s`\nid: %d\n限流: %s\n上行: %sG\n下行: %sG\n到期: %s", user.Username, user.Id, quota, upload, download, *user.ExpiryDate)
+	// quota := "不限"
+	// if user.Quota != -1 {
+	// 	quota = fmt.Sprintf("%.1f", float64(user.Quota)/dao.QuotaMax) + "G"
+	// }
+	// download := fmt.Sprintf("%.1f", float64(user.Download)/dao.QuotaMax)
+	// upload := fmt.Sprintf("%.1f", float64(user.Upload)/dao.QuotaMax)
+	// text := fmt.Sprintf("账号: `%s`\nid: %d\n限流: %s\n上行: %sG\n下行: %sG\n到期: %s", user.Username, user.Id, quota, upload, download, *user.ExpiryDate)
+	text := fmt.Sprintf("账号: `%s`\nid: %d\n到期: %s", user.Username, user.Id, *user.ExpiryDate)
 	return strings.Replace(strings.Replace(text, `-`, `\-`, -1), `.`, `\.`, -1)
 }
