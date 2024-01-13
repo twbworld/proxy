@@ -27,6 +27,7 @@ func Clear() {
 		} else {
 			err = tx.Commit()
 			if err != nil {
+				tx.Rollback()
 				panic("错误[sgfjhios]: " + err.Error())
 			}
 			global.Log.Println("[Clear]成功")
@@ -105,6 +106,7 @@ func Expiry() {
 		} else {
 			err = tx.Commit()
 			if err != nil {
+				tx.Rollback()
 				panic("错误[opiakjf]: " + err.Error())
 			}
 			global.Log.Infoln("[Expiry]过期用户处理: ", ids)

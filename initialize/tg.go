@@ -40,9 +40,17 @@ func TgInit() {
 		}
 
 		if info.LastErrorDate != 0 {
-			global.Log.Errorln("Telegram callback failed[fosdjfoisj]: ", info.LastErrorMessage)
+			global.Log.Errorln("获取tg信息错误[fosdjfoisj]: ", info.LastErrorMessage)
 			return
 		}
 		global.Log.Printf("成功配置tg[doiasjo]: %s", global.Bot.Self.UserName)
 	}
+}
+
+func TgClear() (err error) {
+	if global.Bot == nil {
+		return
+	}
+	_, err = global.Bot.Request(tg.DeleteWebhookConfig{})
+	return
 }

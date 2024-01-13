@@ -72,7 +72,7 @@ func Init() {
 		global.Log.Panicln("服务关闭出错[oijojiud]", err)
 	}
 	service.TgSend("服务退出成功")
-	service.TgWebhookClear()
+	TgClear()
 	global.Log.Infoln("服务退出成功")
 
 }

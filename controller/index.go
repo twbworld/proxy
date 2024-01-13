@@ -50,6 +50,6 @@ func Tg(ctx *gin.Context) {
 	}()
 
 	service.IsTgSend = false
-	err = service.TgWebhookHandle(ctx)
+	err = service.Webhook(ctx)
 
 }

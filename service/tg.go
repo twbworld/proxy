@@ -18,6 +18,10 @@ import (
 
 var IsTgSend bool //只允许发送一次
 
+type tgConfig struct {
+	update *tg.Update
+}
+
 func TgSend(text string) (err error) {
 	if global.Bot == nil || text == "" || IsTgSend {
 		return
@@ -30,58 +34,57 @@ func TgSend(text string) (err error) {
 	return
 }
 
-func TgWebhookClear() (err error) {
-	if global.Bot == nil {
+func Webhook(ctx *gin.Context) (err error) {
+	c := &tgConfig{
+		update: &tg.Update{},
+	}
+	if err = json.NewDecoder(ctx.Request.Body).Decode(c.update); err != nil {
 		return
 	}
-	_, err = global.Bot.Request(tg.DeleteWebhookConfig{})
-	return
+
+	return c.handle()
 }
 
-func TgWebhookHandle(ctx *gin.Context) error {
-	var update tg.Update
-	if err := json.NewDecoder(ctx.Request.Body).Decode(&update); err != nil {
-		return err
-	}
+func (c tgConfig) handle() error {
 
 	// st, _ := json.Marshal(update)
 	// fmt.Println(string(st))
 
-	if update.Message != nil {
+	if c.update.Message != nil {
 		// (对话第一步) 和 (对话第五步)
-		return firstStep(&update)
-	} else if update.CallbackQuery != nil {
-		if update.CallbackQuery.Data == "" {
+		return c.firstStep()
+	} else if c.update.CallbackQuery != nil {
+		if c.update.CallbackQuery.Data == "" {
 			return errors.New("参数错误[gdoigjiod]")
 		}
 
 		//操作@用户id
-		if params := regexp.MustCompile(`(.+)@(\d+)@(.+)`).FindStringSubmatch(update.CallbackQuery.Data); len(params) > 3 {
+		if params := regexp.MustCompile(`(.+)@(\d+)@(.+)`).FindStringSubmatch(c.update.CallbackQuery.Data); len(params) > 3 {
 			// (对话第四步)
 			intNum, err := strconv.Atoi(params[2])
 			if err != nil {
 				return errors.New("参数错误[oidfjgoid]")
 			}
-			return input(&update, uint(intNum), params[3])
-		} else if params := regexp.MustCompile(`(.+)@(\d+)`).FindStringSubmatch(update.CallbackQuery.Data); len(params) > 2 {
+			return c.input(uint(intNum), params[3])
+		} else if params := regexp.MustCompile(`(.+)@(\d+)`).FindStringSubmatch(c.update.CallbackQuery.Data); len(params) > 2 {
 			// (对话第三步)
 			intNum, err := strconv.Atoi(params[2])
 			if err != nil {
 				return errors.New("参数错误[opdpp]")
 			}
-			return actionType(&update, params[1], uint(intNum))
+			return c.actionType(params[1], uint(intNum))
 
 		} else {
 			// (对话第二步)
-			return selectUser(&update)
+			return c.selectUser()
 		}
 
 	}
 	return nil
 }
 
-func firstStep(update *tg.Update) error {
-	msg := tg.NewMessage(update.Message.Chat.ID, "")
+func (c tgConfig) firstStep() error {
+	msg := tg.NewMessage(c.update.Message.Chat.ID, "")
 	msg.Text = "命令不存在!!!"
 	//ReplyKeyboard位于输入框下的按钮
 	msg.ReplyMarkup = tg.NewReplyKeyboard(
@@ -91,12 +94,12 @@ func firstStep(update *tg.Update) error {
 	)
 
 	var info model.SystemInfo
-	errSys := dao.GetSysValByKey(&info, strconv.FormatInt(update.Message.Chat.ID, 10)+"_step")
+	errSys := dao.GetSysValByKey(&info, strconv.FormatInt(c.update.Message.Chat.ID, 10)+"_step")
 
-	if update.Message.IsCommand() {
-		switch update.Message.Command() {
+	if c.update.Message.IsCommand() {
+		switch c.update.Message.Command() {
 		case "start", "help":
-			msg.Text = "\nHello " + update.Message.From.FirstName + update.Message.From.LastName
+			msg.Text = "\nHello " + c.update.Message.From.FirstName + c.update.Message.From.LastName
 			//InlineKeyboard位于对话框下的按钮
 			msg.ReplyMarkup = tg.NewInlineKeyboardMarkup(
 				tg.NewInlineKeyboardRow(
@@ -126,17 +129,17 @@ func firstStep(update *tg.Update) error {
 					}
 				}()
 
-				err = dao.SaveSysVal(tx, strconv.FormatInt(update.Message.Chat.ID, 10)+"_step", "")
+				err = dao.SaveSysVal(tx, strconv.FormatInt(c.update.Message.Chat.ID, 10)+"_step", "")
 				if err != nil {
 					err = errors.New("开启事务失败[oierutgoe]: " + err.Error())
 				}
 			}
 
 		default:
-			msg.ReplyToMessageID = update.Message.MessageID //引用对话
+			msg.ReplyToMessageID = c.update.Message.MessageID //引用对话
 		}
 	} else {
-		msg.ReplyToMessageID = update.Message.MessageID //引用对话
+		msg.ReplyToMessageID = c.update.Message.MessageID //引用对话
 
 		if errSys != nil {
 			goto SEND
@@ -150,7 +153,7 @@ func firstStep(update *tg.Update) error {
 		}
 
 		if info.Value == "user_insert" {
-			return userInsert(update, &info)
+			return c.userInsert(&info)
 		}
 
 		params := regexp.MustCompile(`(.+)@(\d+)@(.+)`).FindStringSubmatch(info.Value)
@@ -181,25 +184,28 @@ func firstStep(update *tg.Update) error {
 				tx.Rollback()
 			} else {
 				err = tx.Commit()
-				panic(err)
+				if err != nil {
+					tx.Rollback()
+					panic(err)
+				}
 			}
 		}()
 
 		switch params[3] {
 		case "quota":
-			text, err := strconv.ParseFloat(update.Message.Text, 64)
+			text, err := strconv.ParseFloat(c.update.Message.Text, 64)
 			if err != nil || (text != -1 && text < 0) {
 				msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的流量数值, 单位为*G*; 如想限制该用户为2\\.3G流量,则输入\"2\\.3\", 不限则输入\"\\-1\"", user.Username)
 				msg.ParseMode = "MarkdownV2"
 				dao.SaveSysVal(tx, info.Key, info.Value) //为了更新时间字段update_time
 				goto SEND
 			}
-			if update.Message.Text != "-1" {
+			if c.update.Message.Text != "-1" {
 				text = text * dao.QuotaMax
 			}
 			user.Quota = int(text)
 		case "expiryDate":
-			t, err := time.Parse(time.DateOnly, update.Message.Text)
+			t, err := time.Parse(time.DateOnly, c.update.Message.Text)
 			if err != nil {
 				msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的到期时间, 格式为\"2066\\-06\\-06\"", user.Username)
 				msg.ParseMode = "MarkdownV2"
@@ -222,7 +228,7 @@ func firstStep(update *tg.Update) error {
 		if err != nil {
 			return errors.New("错误[asdsad]: " + err.Error())
 		}
-		msg.Text = "*修改成功\\!\\!\\!*\n" + getUserMarkdownV2Text(&user)
+		msg.Text = "*修改成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(&user)
 		msg.ReplyMarkup = tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
 				tg.NewInlineKeyboardButtonData("修改此用户["+user.Username+"]", fmt.Sprintf("user_update@%d", user.Id)),
@@ -235,8 +241,8 @@ SEND:
 	return err
 }
 
-func selectUser(update *tg.Update) error {
-	switch update.CallbackQuery.Data {
+func (c tgConfig) selectUser() error {
+	switch c.update.CallbackQuery.Data {
 	case "user_select":
 		var (
 			row        []tg.InlineKeyboardButton
@@ -250,14 +256,14 @@ func selectUser(update *tg.Update) error {
 		l := len(usersMysql)
 		for _, v := range usersMysql {
 			l--
-			row = append(row, tg.NewInlineKeyboardButtonData(v.Username, update.CallbackQuery.Data+"@"+strconv.Itoa(int(v.Id))))
+			row = append(row, tg.NewInlineKeyboardButtonData(v.Username, c.update.CallbackQuery.Data+"@"+strconv.Itoa(int(v.Id))))
 			if len(row) == 2 || l == 0 {
 				//每行两个进行展示
 				mkrow = append(mkrow, tg.NewInlineKeyboardRow(row...))
 				row = []tg.InlineKeyboardButton{}
 			}
 		}
-		msg := tg.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "选择*查询*的用户", tg.NewInlineKeyboardMarkup(mkrow...))
+		msg := tg.NewEditMessageTextAndMarkup(c.update.CallbackQuery.Message.Chat.ID, c.update.CallbackQuery.Message.MessageID, "选择*查询*的用户", tg.NewInlineKeyboardMarkup(mkrow...))
 		msg.ParseMode = "MarkdownV2"
 		if _, err = global.Bot.Send(msg); err != nil {
 			return errors.New("错误[iofgjiosj]" + err.Error())
@@ -276,24 +282,25 @@ func selectUser(update *tg.Update) error {
 			} else {
 				err = tx.Commit()
 				if err != nil {
+					tx.Rollback()
 					panic(err)
 				}
 			}
 		}()
 
-		err = dao.SaveSysVal(tx, strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)+"_step", "user_insert")
+		err = dao.SaveSysVal(tx, strconv.FormatInt(c.update.CallbackQuery.Message.Chat.ID, 10)+"_step", "user_insert")
 		if err != nil {
 			return errors.New("错误[fgrejlk]" + err.Error())
 		}
 
-		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, "请输入用户名称, 4\\-64个字符以内的英文/数字/符号\n例:`210606_abc`")
+		msg := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "请输入用户名称, 4\\-64个字符以内的英文/数字/符号\n例:`210606_abc`")
 		msg.ParseMode = "MarkdownV2"
 		if _, err := global.Bot.Send(msg); err != nil {
 			return errors.New("错误[fgrejlk]" + err.Error())
 		}
 
 	default:
-		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, "命令不存在!!!")
+		msg := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "命令不存在!!!")
 		if _, err := global.Bot.Send(msg); err != nil {
 			return errors.New("错误[fdxcvjkh]" + err.Error())
 		}
@@ -302,14 +309,14 @@ func selectUser(update *tg.Update) error {
 	return nil
 }
 
-func actionType(update *tg.Update, act string, userId uint) error {
+func (c tgConfig) actionType(act string, userId uint) error {
 	var user model.Users
 	err := dao.GetUsersByUserId(&user, userId)
 	if err != nil {
 		TgSend("找不到用户")
 		return errors.New("错误[jfdsgsd]" + err.Error())
 	}
-	msg := tg.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, getUserMarkdownV2Text(&user), tg.NewInlineKeyboardMarkup([]tg.InlineKeyboardButton{}))
+	msg := tg.NewEditMessageTextAndMarkup(c.update.CallbackQuery.Message.Chat.ID, c.update.CallbackQuery.Message.MessageID, c.getUserMarkdownV2Text(&user), tg.NewInlineKeyboardMarkup([]tg.InlineKeyboardButton{}))
 	msg.ParseMode = "MarkdownV2"
 
 	switch act {
@@ -340,7 +347,7 @@ SEND3:
 	return err
 }
 
-func input(update *tg.Update, userId uint, value string) error {
+func (c tgConfig) input(userId uint, value string) error {
 	var user model.Users
 	err := dao.GetUsersByUserId(&user, userId)
 	if err != nil {
@@ -351,14 +358,14 @@ func input(update *tg.Update, userId uint, value string) error {
 	ikb := tg.NewInlineKeyboardMarkup(
 		[]tg.InlineKeyboardButton{},
 	)
-	msg := tg.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "", ikb)
+	msg := tg.NewEditMessageTextAndMarkup(c.update.CallbackQuery.Message.Chat.ID, c.update.CallbackQuery.Message.MessageID, "", ikb)
 
 	msg.ParseMode = "MarkdownV2"
 	switch value {
 	case "quota":
-		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的流量数值, 单位为*G*; 如想限制该用户为2\\.3G流量,则输入\"2\\.3\", 不限则输入\"\\-1\"\n", user.Username) + getUserMarkdownV2Text(&user)
+		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的流量数值, 单位为*G*; 如想限制该用户为2\\.3G流量,则输入\"2\\.3\", 不限则输入\"\\-1\"\n", user.Username) + c.getUserMarkdownV2Text(&user)
 	case "expiryDate":
-		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的到期时间, 格式为\"2066\\-06\\-06\"\n", user.Username) + getUserMarkdownV2Text(&user)
+		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的到期时间, 格式为\"2066\\-06\\-06\"\n", user.Username) + c.getUserMarkdownV2Text(&user)
 	default:
 		msg.Text = "命令不存在!!!"
 	}
@@ -379,17 +386,18 @@ func input(update *tg.Update, userId uint, value string) error {
 		} else {
 			err = tx.Commit()
 			if err != nil {
+				tx.Rollback()
 				panic(err)
 			}
 		}
 	}()
 
-	return dao.SaveSysVal(tx, strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)+"_step", update.CallbackQuery.Data)
+	return dao.SaveSysVal(tx, strconv.FormatInt(c.update.CallbackQuery.Message.Chat.ID, 10)+"_step", c.update.CallbackQuery.Data)
 }
 
-func userInsert(update *tg.Update, info *model.SystemInfo) (err error) {
-	msg := tg.NewMessage(update.Message.Chat.ID, "")
-	msg.ReplyToMessageID = update.Message.MessageID //引用对话
+func (c tgConfig) userInsert(info *model.SystemInfo) (err error) {
+	msg := tg.NewMessage(c.update.Message.Chat.ID, "")
+	msg.ReplyToMessageID = c.update.Message.MessageID //引用对话
 	tx, err := dao.DB.Beginx()
 	if err != nil {
 		return errors.New("开启事务失败[glyasd]: " + err.Error())
@@ -406,36 +414,36 @@ func userInsert(update *tg.Update, info *model.SystemInfo) (err error) {
 	}()
 
 	var user model.Users
-	if ok, _ := regexp.MatchString("^[a-zA-Z0-9_-]{4,64}$", update.Message.Text); !ok {
+	if ok, _ := regexp.MatchString("^[a-zA-Z0-9_-]{4,64}$", c.update.Message.Text); !ok {
 		msg.Text = "请输入用户名称, 64个字符以内的英文/数字/字符\n例:`210606_abc`"
 		msg.ParseMode = "MarkdownV2"
 		dao.SaveSysVal(tx, info.Key, info.Value) //为了更新时间字段update_time
 		goto SEND2
 	}
 
-	err = dao.GetUsersByUserName(&user, update.Message.Text)
+	err = dao.GetUsersByUserName(&user, c.update.Message.Text)
 	if err == nil {
-		msg.Text = strings.Replace(fmt.Sprintf("*用户`%s`已存在\\!\\!\\!*\n", update.Message.Text), `-`, `\-`, -1) + getUserMarkdownV2Text(&user)
+		msg.Text = strings.Replace(fmt.Sprintf("*用户`%s`已存在\\!\\!\\!*\n", c.update.Message.Text), `-`, `\-`, -1) + c.getUserMarkdownV2Text(&user)
 		msg.ParseMode = "MarkdownV2"
 		dao.SaveSysVal(tx, info.Key, info.Value)
 		goto SEND2
 	}
 
-	err = dao.InsertEmptyUsers(tx, update.Message.Text)
+	err = dao.InsertEmptyUsers(tx, c.update.Message.Text)
 	if err != nil {
 		msg.Text = `系统错误, 请按"/start"重新设置4`
 		dao.SaveSysVal(tx, info.Key, info.Value)
 		goto SEND2
 	}
 
-	err = dao.GetUsersByUserNameTx(tx, &user, update.Message.Text)
+	err = dao.GetUsersByUserNameTx(tx, &user, c.update.Message.Text)
 	if err != nil {
 		msg.Text = `系统错误, 请按"/start"重新设置5`
 		dao.SaveSysVal(tx, info.Key, info.Value)
 		goto SEND2
 	}
 
-	msg.Text = "*新增成功\\!\\!\\!*\n" + getUserMarkdownV2Text(&user)
+	msg.Text = "*新增成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(&user)
 	msg.ParseMode = "MarkdownV2"
 	msg.ReplyMarkup = tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
@@ -448,7 +456,7 @@ SEND2:
 	return
 }
 
-func getUserMarkdownV2Text(user *model.Users) string {
+func (c tgConfig) getUserMarkdownV2Text(user *model.Users) string {
 	// quota := "不限"
 	// if user.Quota != -1 {
 	// 	quota = fmt.Sprintf("%.1f", float64(user.Quota)/dao.QuotaMax) + "G"
