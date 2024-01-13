@@ -20,7 +20,7 @@ func Init() {
 
 	ginfile, err := os.OpenFile(global.Config.AppConfig.GinLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		global.Log.Panicln("打开文件错误: ", err)
+		panic("打开文件错误[nvcbjkdfgu]: " + err.Error())
 	}
 	gin.DefaultWriter = io.MultiWriter(ginfile) //记录所有日志
 	gin.DefaultErrorWriter = global.Log.Out
@@ -43,7 +43,7 @@ func Init() {
 	//协程启动服务
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			global.Log.Panicln(err)
+			global.Log.Panic("服务出错[isjfio]: ", err.Error()) //外部并不能捕获Panic
 		}
 	}()
 
@@ -60,7 +60,6 @@ func Init() {
 	//来到这 证明有关闭指令,将进行平滑优雅关闭服务
 
 	global.Log.Infof("程序关闭中..., port: %s, pid: %d", global.Config.AppConfig.GinAddr, syscall.Getpid())
-	service.TgSend("程序关闭中...")
 
 	stop()
 
@@ -72,8 +71,8 @@ func Init() {
 	if err := server.Shutdown(timeoutCtx); err != nil {
 		global.Log.Panicln("服务关闭出错[oijojiud]", err)
 	}
-	service.TgSend("程序关闭成功")
+	service.TgSend("服务退出成功")
 	service.TgWebhookClear()
-	global.Log.Infoln("服务关闭!")
+	global.Log.Infoln("服务退出成功")
 
 }

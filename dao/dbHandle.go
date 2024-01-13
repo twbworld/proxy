@@ -133,13 +133,9 @@ func UpdateUsersExpiry(ids []uint, tx *sqlx.Tx) (err error) {
 	return
 }
 
-
 func InsertEmptyUsers(tx *sqlx.Tx, userName string) (err error) {
 	sql := "INSERT INTO `users`(`username`, `password`, `passwordShow`, `quota`, `download`, `upload`, `useDays`, `expiryDate`) VALUES(:username, :password, :passwordShow, :quota, :download, :upload, :useDays, :expiryDate)"
 
-	if err != nil {
-		return err
-	}
 	t := time.Now().AddDate(0, 1, 0)
 
 	_, err = tx.NamedExec(sql, map[string]interface{}{

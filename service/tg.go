@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -15,25 +16,26 @@ import (
 	"github.com/twbworld/proxy/model"
 )
 
-func TgSend(text string) (err error) {
+var IsTgSend bool //只允许发送一次
 
-	if global.Bot == nil || text == "" {
+func TgSend(text string) (err error) {
+	if global.Bot == nil || text == "" || IsTgSend {
 		return
 	}
-
 	msg := tg.NewMessage(global.Config.Env.Telegram.Id, fmt.Sprintf("[%s]%s", global.Config.AppConfig.ProjectName, text))
 	_, err = global.Bot.Send(msg)
-	if err != nil {
-		global.Log.Warn("发送通知失败[fgsdfg]: ", err)
+	if err == nil {
+		IsTgSend = true
 	}
 	return
 }
 
-func TgWebhookClear() {
+func TgWebhookClear() (err error) {
 	if global.Bot == nil {
 		return
 	}
-	global.Bot.Request(tg.DeleteWebhookConfig{})
+	_, err = global.Bot.Request(tg.DeleteWebhookConfig{})
+	return
 }
 
 func TgWebhookHandle(ctx *gin.Context) error {
@@ -50,7 +52,7 @@ func TgWebhookHandle(ctx *gin.Context) error {
 		return firstStep(&update)
 	} else if update.CallbackQuery != nil {
 		if update.CallbackQuery.Data == "" {
-			return TgSend("参数错误[gdoigjiod]")
+			return errors.New("参数错误[gdoigjiod]")
 		}
 
 		//操作@用户id
@@ -58,14 +60,14 @@ func TgWebhookHandle(ctx *gin.Context) error {
 			// (对话第四步)
 			intNum, err := strconv.Atoi(params[2])
 			if err != nil {
-				return TgSend("参数错误[oidfjgoid]")
+				return errors.New("参数错误[oidfjgoid]")
 			}
 			return input(&update, uint(intNum), params[3])
 		} else if params := regexp.MustCompile(`(.+)@(\d+)`).FindStringSubmatch(update.CallbackQuery.Data); len(params) > 2 {
 			// (对话第三步)
 			intNum, err := strconv.Atoi(params[2])
 			if err != nil {
-				return TgSend("参数错误[oidfjgoid]")
+				return errors.New("参数错误[opdpp]")
 			}
 			return actionType(&update, params[1], uint(intNum))
 
@@ -80,7 +82,7 @@ func TgWebhookHandle(ctx *gin.Context) error {
 
 func firstStep(update *tg.Update) error {
 	msg := tg.NewMessage(update.Message.Chat.ID, "")
-	msg.Text = "No such command!!!"
+	msg.Text = "命令不存在!!!"
 	//ReplyKeyboard位于输入框下的按钮
 	msg.ReplyMarkup = tg.NewReplyKeyboard(
 		tg.NewKeyboardButtonRow(
@@ -107,24 +109,26 @@ func firstStep(update *tg.Update) error {
 				//初始化,清空流程码
 				tx, err := dao.DB.Beginx()
 				if err != nil {
-					global.Log.Error("开启事务失败[ghfgasd]: ", err)
-					return TgSend(`系统错误, 请按"/start"重新设置10`)
+					return errors.New("开启事务失败[ghfgasd]: " + err.Error())
 				}
 				defer func() {
 					if p := recover(); p != nil {
 						tx.Rollback()
+						panic(p)
 					} else if err != nil {
-						global.Log.Warn("事务回滚[ertydfvbx]: ", err)
 						tx.Rollback()
 					} else {
 						err = tx.Commit()
+						if err != nil {
+							tx.Rollback()
+							panic(err)
+						}
 					}
 				}()
 
 				err = dao.SaveSysVal(tx, strconv.FormatInt(update.Message.Chat.ID, 10)+"_step", "")
 				if err != nil {
-					TgSend(`系统错误, 请按"/start"重新设置2`)
-					return err
+					err = errors.New("开启事务失败[oierutgoe]: " + err.Error())
 				}
 			}
 
@@ -133,12 +137,16 @@ func firstStep(update *tg.Update) error {
 		}
 	} else {
 		msg.ReplyToMessageID = update.Message.MessageID //引用对话
+
 		if errSys != nil {
 			goto SEND
-		} else if t, err := time.Parse(time.RFC3339, info.UpdateTime); err != nil || time.Now().Unix()-t.Unix() > dao.SysTimeOut {
+		} else if t, err := time.Parse(time.DateTime, info.UpdateTime); err != nil || time.Now().Unix()-t.Unix() > dao.SysTimeOut {
+			if err != nil {
+				return errors.New("系统错误[adfaio]" + err.Error())
+			}
 			//数据过期
-			msg.Text = `输入超时, 请按"/start"重新设置:`
-			goto SEND
+			TgSend(`输入超时, 请按"/start"重新设置:`)
+			return nil
 		}
 
 		if info.Value == "user_insert" {
@@ -147,32 +155,33 @@ func firstStep(update *tg.Update) error {
 
 		params := regexp.MustCompile(`(.+)@(\d+)@(.+)`).FindStringSubmatch(info.Value)
 		if len(params) < 4 {
-			return TgSend(`系统错误, 请按"/start"重新设置6`)
+			return errors.New("参数错误[fijsa]")
 		}
 
 		intNum, err := strconv.Atoi(params[2])
 		if err != nil {
-			return TgSend(`系统错误, 请按"/start"重新设置7`)
+			return errors.New("错误[jklsd]: " + err.Error())
 		}
 		var user model.Users
 		err = dao.GetUsersByUserId(&user, uint(intNum))
 		if err != nil {
-			return TgSend(`系统错误, 请按"/start"重新设置8`)
+			return errors.New("错误[tigfhh]: " + err.Error())
 		}
 
 		tx, err := dao.DB.Beginx()
 		if err != nil {
-			global.Log.Error("开启事务失败[lkdfty]: ", err)
-			return TgSend(`系统错误, 请按"/start"重新设置9`)
+			return errors.New("开启事务失败[lkdfty]: " + err.Error())
 		}
 		defer func() {
 			if p := recover(); p != nil {
 				tx.Rollback()
+				panic(p)
 			} else if err != nil {
-				global.Log.Warn("事务回滚[lghjfn]: ", err)
+				global.Log.Warnln("事务回滚[lghjfn]: ", err)
 				tx.Rollback()
 			} else {
 				err = tx.Commit()
+				panic(err)
 			}
 		}()
 
@@ -200,21 +209,18 @@ func firstStep(update *tg.Update) error {
 			ExpiryDate := t.Format(time.DateOnly)
 			user.ExpiryDate = &ExpiryDate
 		default:
-			TgSend(`系统错误, 请按"/start"重新设置1`)
-			return err
+			return errors.New("错误[kdfhf]: " + params[3])
 		}
 
 		err = dao.UpdateUsers(tx, &user)
 		if err != nil {
-			TgSend(`系统错误, 请按"/start"重新设置11`)
-			return err
+			return errors.New("错误[jkljkjkl]: " + err.Error())
 		}
 
 		//修改成功后,清空流程码
 		err = dao.SaveSysVal(tx, info.Key, "")
 		if err != nil {
-			TgSend(`系统错误, 请按"/start"重新设置12`)
-			return err
+			return errors.New("错误[asdsad]: " + err.Error())
 		}
 		msg.Text = "*修改成功\\!\\!\\!*\n" + getUserMarkdownV2Text(&user)
 		msg.ReplyMarkup = tg.NewInlineKeyboardMarkup(
@@ -225,11 +231,8 @@ func firstStep(update *tg.Update) error {
 		msg.ParseMode = "MarkdownV2"
 	}
 SEND:
-	if _, err := global.Bot.Send(msg); err != nil {
-		global.Log.Warn("发送通知失败[ljasrf]: ", err)
-		return err
-	}
-	return nil
+	_, err := global.Bot.Send(msg)
+	return err
 }
 
 func selectUser(update *tg.Update) error {
@@ -242,7 +245,7 @@ func selectUser(update *tg.Update) error {
 		)
 		err := dao.GetUserNames(&usersMysql)
 		if err != nil {
-			return err
+			return errors.New("错误[lkffgdh]" + err.Error())
 		}
 		l := len(usersMysql)
 		for _, v := range usersMysql {
@@ -257,46 +260,45 @@ func selectUser(update *tg.Update) error {
 		msg := tg.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, "选择*查询*的用户", tg.NewInlineKeyboardMarkup(mkrow...))
 		msg.ParseMode = "MarkdownV2"
 		if _, err = global.Bot.Send(msg); err != nil {
-			global.Log.Warn("发送通知失败[kuyhsdf]: ", err)
-			return err
+			return errors.New("错误[iofgjiosj]" + err.Error())
 		}
 	case "user_insert":
 		tx, err := dao.DB.Beginx()
 		if err != nil {
-			global.Log.Error("开启事务失败[dfgfgd]: ", err)
-			return TgSend(`系统错误, 请按"/start"重新设置13`)
+			return errors.New("开启事务失败[sdfgdfjkgh]" + err.Error())
 		}
 		defer func() {
 			if p := recover(); p != nil {
 				tx.Rollback()
+				panic(p)
 			} else if err != nil {
-				global.Log.Warn("事务回滚[iotghjddskfj]: ", err)
 				tx.Rollback()
 			} else {
 				err = tx.Commit()
+				if err != nil {
+					panic(err)
+				}
 			}
 		}()
 
 		err = dao.SaveSysVal(tx, strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)+"_step", "user_insert")
 		if err != nil {
-			TgSend(`系统错误, 请按"/start"重新设置14`)
-			return err
+			return errors.New("错误[fgrejlk]" + err.Error())
 		}
 
 		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, "请输入用户名称, 4\\-64个字符以内的英文/数字/符号\n例:`210606_abc`")
 		msg.ParseMode = "MarkdownV2"
 		if _, err := global.Bot.Send(msg); err != nil {
-			global.Log.Warn("发送通知失败[oikpvdf]: ", err)
-			return err
+			return errors.New("错误[fgrejlk]" + err.Error())
 		}
 
 	default:
-		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, "No such command!!!")
+		msg := tg.NewMessage(update.CallbackQuery.Message.Chat.ID, "命令不存在!!!")
 		if _, err := global.Bot.Send(msg); err != nil {
-			global.Log.Warn("发送通知失败[jfggf]: ", err)
-			return err
+			return errors.New("错误[fdxcvjkh]" + err.Error())
 		}
 	}
+
 	return nil
 }
 
@@ -304,7 +306,8 @@ func actionType(update *tg.Update, act string, userId uint) error {
 	var user model.Users
 	err := dao.GetUsersByUserId(&user, userId)
 	if err != nil {
-		return TgSend("找不到用户[odfgmd]:")
+		TgSend("找不到用户")
+		return errors.New("错误[jfdsgsd]" + err.Error())
 	}
 	msg := tg.NewEditMessageTextAndMarkup(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Message.MessageID, getUserMarkdownV2Text(&user), tg.NewInlineKeyboardMarkup([]tg.InlineKeyboardButton{}))
 	msg.ParseMode = "MarkdownV2"
@@ -333,18 +336,16 @@ func actionType(update *tg.Update, act string, userId uint) error {
 	}
 
 SEND3:
-	if _, err := global.Bot.Send(msg); err != nil {
-		global.Log.Warn("发送通知失败[klhjseerfwvc]: ", err)
-		return err
-	}
-	return nil
+	_, err = global.Bot.Send(msg)
+	return err
 }
 
 func input(update *tg.Update, userId uint, value string) error {
 	var user model.Users
 	err := dao.GetUsersByUserId(&user, userId)
 	if err != nil {
-		return TgSend("找不到用户[kghdfg]:")
+		TgSend("找不到用户")
+		return errors.New("找不到用户[kysafd]")
 	}
 
 	ikb := tg.NewInlineKeyboardMarkup(
@@ -359,51 +360,45 @@ func input(update *tg.Update, userId uint, value string) error {
 	case "expiryDate":
 		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的到期时间, 格式为\"2066\\-06\\-06\"\n", user.Username) + getUserMarkdownV2Text(&user)
 	default:
-		msg.Text = "No such command!!!"
+		msg.Text = "命令不存在!!!"
 	}
 	if _, err := global.Bot.Send(msg); err != nil {
-		global.Log.Warn("发送通知失败[kolhjsrbv]: ", err)
-		return err
+		return errors.New("错误[kysafd]" + err.Error())
 	}
 
 	tx, err := dao.DB.Beginx()
 	if err != nil {
-		global.Log.Error("开启事务失败[jerdavj]: ", err)
-		return TgSend(`系统错误, 请按"/start"重新设置15`)
+		return errors.New("开启事务失败[fdsgafsd]" + err.Error())
 	}
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
+			panic(p)
 		} else if err != nil {
-			global.Log.Warn("事务回滚[iotghjddskfj]: ", err)
 			tx.Rollback()
 		} else {
 			err = tx.Commit()
+			if err != nil {
+				panic(err)
+			}
 		}
 	}()
 
-	err = dao.SaveSysVal(tx, strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)+"_step", update.CallbackQuery.Data)
-	if err != nil {
-		TgSend(`系统错误, 请按"/start"重新设置16`)
-		return err
-	}
-
-	return nil
+	return dao.SaveSysVal(tx, strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)+"_step", update.CallbackQuery.Data)
 }
 
-func userInsert(update *tg.Update, info *model.SystemInfo) error {
+func userInsert(update *tg.Update, info *model.SystemInfo) (err error) {
 	msg := tg.NewMessage(update.Message.Chat.ID, "")
 	msg.ReplyToMessageID = update.Message.MessageID //引用对话
 	tx, err := dao.DB.Beginx()
 	if err != nil {
-		global.Log.Error("开启事务失败[lkdfty]: ", err)
-		return TgSend(`系统错误, 请按"/start"重新设置3`)
+		return errors.New("开启事务失败[glyasd]: " + err.Error())
 	}
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
+			err = errors.New("错误[podghj]: " + err.Error())
 		} else if err != nil {
-			global.Log.Warn("事务回滚[lghjfn]: ", err)
 			tx.Rollback()
 		} else {
 			err = tx.Commit()
@@ -449,12 +444,10 @@ func userInsert(update *tg.Update, info *model.SystemInfo) error {
 	)
 
 SEND2:
-	if _, err := global.Bot.Send(msg); err != nil {
-		global.Log.Warn("发送通知失败[ljasrf]: ", err)
-		return err
-	}
-	return nil
+	_, err = global.Bot.Send(msg)
+	return
 }
+
 func getUserMarkdownV2Text(user *model.Users) string {
 	// quota := "不限"
 	// if user.Quota != -1 {

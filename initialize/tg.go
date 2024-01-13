@@ -12,7 +12,7 @@ func TgInit() {
 
 	bot, err := tg.NewBotAPI(global.Config.Env.Telegram.Token)
 	if err != nil {
-		global.Log.Warn("bot初始化失败[jfsertyu]: ", err)
+		global.Log.Errorln("bot初始化失败[jfsertyu]: ", err)
 		return
 	}
 	global.Bot = bot
@@ -23,24 +23,24 @@ func TgInit() {
 		Description: "开始",
 	})
 	if _, err := global.Bot.Request(setCommands); err != nil {
-		global.Log.Warn("设置Command失败[podritgfd]: ", err)
+		global.Log.Warnln("设置Command失败[podritgfd]: ", err)
 	}
 
 	if global.Config.Env.Domain != "" {
 		wh, _ := tg.NewWebhook("https://" + global.Config.Env.Domain + "/wh/tg/" + global.Bot.Token)
 		if _, err = global.Bot.Request(wh); err != nil {
-			global.Log.Warn("设置webhook失败[oifoghe]: ", err)
+			global.Log.Errorln("设置webhook失败[oifoghe]: ", err)
 			return
 		}
 
 		info, err := global.Bot.GetWebhookInfo()
 		if err != nil {
-			global.Log.Warn("获取webhook失败[iuieee]: ", err)
+			global.Log.Errorln("获取webhook失败[iuieee]: ", err)
 			return
 		}
 
 		if info.LastErrorDate != 0 {
-			global.Log.Warn("Telegram callback failed[fosdjfoisj]: ", info.LastErrorMessage)
+			global.Log.Errorln("Telegram callback failed[fosdjfoisj]: ", info.LastErrorMessage)
 			return
 		}
 		global.Log.Printf("成功配置tg[doiasjo]: %s", global.Bot.Self.UserName)

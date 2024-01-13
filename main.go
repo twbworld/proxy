@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/initialize"
@@ -16,10 +17,19 @@ func main() {
 
 	global.Init()
 
-	dao.Init()
 	defer func() {
-		dao.Close()
+		if p := recover(); p != nil {
+			global.Log.Println(p)
+		}
+		if dao.DB != nil {
+			err := dao.Close()
+			if err != nil {
+				global.Log.Println("数据库关闭出错[joiasjofg]", err)
+			}
+		}
 	}()
+
+	dao.Init()
 
 	switch act {
 	case "":
@@ -31,7 +41,5 @@ func main() {
 	default:
 		log.Println("参数可选: clear|expiry")
 	}
-
-	global.Log.Info("完成")
 
 }

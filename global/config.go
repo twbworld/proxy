@@ -33,7 +33,7 @@ func initEnv(configPath string) {
 	v.SetConfigFile(configPath)
 	v.SetConfigType("json")
 	if err := v.ReadInConfig(); err != nil {
-		Log.Fatalln("读取配置失败[u9ij]: ", err)
+		panic("读取配置失败[u9ij]: " + err.Error())
 	}
 
 	// 监听配置文件
@@ -50,7 +50,7 @@ func initEnv(configPath string) {
 
 	// 将配置赋值给全局变量
 	if err := v.Unmarshal(&Config.Env); err != nil {
-		Log.Panicln(err)
+		panic("出错[dhfal]: " + err.Error())
 	}
 
 }

@@ -1,6 +1,8 @@
 package global
 
 import (
+	"log"
+
 	"github.com/twbworld/proxy/config"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -15,6 +17,12 @@ var (
 )
 
 func Init() {
+	defer func() {
+		if p := recover(); p != nil {
+			log.Println(p)
+		}
+	}()
+
 	initConfig()
 	initLog(Config.AppConfig.RunLogPath)
 	initEnv(Config.AppConfig.EnvPath)

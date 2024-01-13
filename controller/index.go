@@ -2,10 +2,12 @@ package controller
 
 import (
 	"encoding/json"
-	"github.com/twbworld/proxy/dao"
-	"github.com/twbworld/proxy/model"
 	"net/http"
 	"regexp"
+
+	"github.com/twbworld/proxy/dao"
+	"github.com/twbworld/proxy/global"
+	"github.com/twbworld/proxy/model"
 
 	"github.com/twbworld/proxy/service"
 
@@ -29,11 +31,25 @@ func Index(ctx *gin.Context) {
 }
 
 func Tg(ctx *gin.Context) {
-	if err := service.TgWebhookHandle(ctx); err != nil {
-		errMsg, _ := json.Marshal(map[string]string{"error": err.Error()})
-		ctx.Writer.WriteHeader(http.StatusBadRequest)
-		ctx.Writer.Header().Set("Content-Type", "application/json")
-		_, _ = ctx.Writer.Write(errMsg)
-		return
-	}
+	var err error
+
+	defer func() {
+		if p := recover(); p != nil || err != nil {
+			if p != nil {
+				global.Log.Errorln(p)
+			} else {
+				global.Log.Errorln(err)
+			}
+			service.TgSend(`系统错误, 请按"/start"重新设置`)
+			errMsg, _ := json.Marshal(map[string]string{"error": "系统出错"})
+			ctx.Writer.WriteHeader(http.StatusBadRequest)
+			ctx.Writer.Header().Set("Content-Type", "application/json")
+			_, _ = ctx.Writer.Write(errMsg)
+		}
+		service.IsTgSend = false
+	}()
+
+	service.IsTgSend = false
+	err = service.TgWebhookHandle(ctx)
+
 }
