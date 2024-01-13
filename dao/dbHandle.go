@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"sync"
 	"time"
 
 	"github.com/twbworld/proxy/global"
@@ -15,6 +16,8 @@ const (
 	SysTimeOut int64   = 30         //流程码过期时间,单位s
 	QuotaMax   float64 = 1073741824 //流量单位转换,入库需要, 1G*1024*1024*1024 = 1073741824byte
 )
+
+var mu sync.Mutex
 
 func GetUsers(users *[]model.Users, where ...string) error {
 	sql := "SELECT * FROM `users` WHERE 1=1"
@@ -49,6 +52,9 @@ func GetUsersByUserId(users *model.Users, id uint) error {
 
 func UpdateUsers(tx *sqlx.Tx, user *model.Users) (err error) {
 	sql := "SELECT `id` FROM `users` WHERE `id`=? FOR UPDATE"
+	if global.Config.Env.Db.Type == "sqlite" {
+		sql = "SELECT `id` FROM `users` WHERE `id`=?"
+	}
 	_, err = tx.Exec(sql, user.Id)
 	if err != nil {
 		return
@@ -71,11 +77,13 @@ func UpdateUsers(tx *sqlx.Tx, user *model.Users) (err error) {
 }
 
 func UpdateUsersClear(tx *sqlx.Tx) (err error) {
-	sql := "LOCK TABLE `users` WRITE"
+	mu.Lock()
 
+	sql := "LOCK TABLE `users` WRITE"
 	if global.Config.Env.Db.Type == "mysql" {
 		_, err = tx.Exec(sql)
 		if err != nil {
+			mu.Unlock()
 			return
 		}
 	}
@@ -83,20 +91,25 @@ func UpdateUsersClear(tx *sqlx.Tx) (err error) {
 	sql = "UPDATE `users` SET `download` = :download, `upload` = :upload"
 	_, err = tx.NamedExec(sql, gin.H{"download": 0, "upload": 0})
 	if err != nil {
+		mu.Unlock()
 		return
 	}
 
 	sql = "UNLOCK TABLES"
-
 	if global.Config.Env.Db.Type == "mysql" {
 		_, err = tx.Exec(sql)
 	}
+
+	mu.Unlock()
 
 	return
 }
 
 func UpdateUsersExpiry(ids []uint, tx *sqlx.Tx) (err error) {
 	sql := "SELECT `id` FROM `users` WHERE `id` IN (?) FOR UPDATE"
+	if global.Config.Env.Db.Type == "sqlite" {
+		sql = "SELECT `id` FROM `users` WHERE `id` IN (?)"
+	}
 	query, args, err := sqlx.In(sql, ids)
 	if err != nil {
 		return
@@ -153,16 +166,19 @@ func GetSysValByKey(SystemInfo *model.SystemInfo, key string) error {
 	return DB.Get(SystemInfo, sql, key)
 }
 
-func SaveSysVal(tx *sqlx.Tx, key string, value string) error {
-	err := CheckSysVal(tx, key)
+func SaveSysVal(tx *sqlx.Tx, key string, value string) (err error) {
+	err = CheckSysVal(tx, key)
 	if err != nil {
-		return err
+		return
 	}
 
 	sql := "SELECT `id` FROM `system_info` WHERE `key`=? FOR UPDATE"
+	if global.Config.Env.Db.Type == "sqlite" {
+		sql = "SELECT `id` FROM `system_info` WHERE `key`=?"
+	}
 	_, err = tx.Exec(sql, key)
 	if err != nil {
-		return err
+		return
 	}
 
 	sql = "UPDATE `system_info` SET `value` = :value, `update_time` = CURRENT_TIMESTAMP WHERE `key` = :key"
@@ -170,25 +186,18 @@ func SaveSysVal(tx *sqlx.Tx, key string, value string) error {
 		"value": value,
 		"key":   key,
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
-func CheckSysVal(tx *sqlx.Tx, key string) error {
+func CheckSysVal(tx *sqlx.Tx, key string) (err error) {
 	var info model.SystemInfo
-	err := GetSysValByKey(&info, key)
+	err = GetSysValByKey(&info, key)
 	if err != nil {
 		//空则创建
 		sql := "INSERT INTO `system_info`(`key`) VALUES(:key)"
 		_, err = tx.NamedExec(sql, map[string]interface{}{
 			"key": key,
 		})
-		if err != nil {
-			return err
-		}
 	}
 
-	return nil
-
+	return
 }
