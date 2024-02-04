@@ -28,10 +28,19 @@ func TestMain(t *testing.T) {
 		{name: "failTest", status: http.StatusMovedPermanently, input: "aa", res: "<a href="},
 	}
 
-	dao.Init()
 	defer func() {
-		dao.Close()
+		if p := recover(); p != nil {
+			global.Log.Println(p)
+		}
+		if dao.DB != nil {
+			err := dao.Close()
+			if err != nil {
+				global.Log.Println("数据库关闭出错[fyhkg]", err)
+			}
+		}
 	}()
+
+	dao.Init()
 
 	ginServer := gin.Default()
 	router.Init(ginServer)

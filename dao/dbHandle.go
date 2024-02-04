@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"database/sql"
 	"sync"
 	"time"
 
@@ -187,7 +188,7 @@ func SaveSysVal(tx *sqlx.Tx, key string, value string) (err error) {
 func CheckSysVal(tx *sqlx.Tx, key string) (err error) {
 	var info model.SystemInfo
 	err = GetSysValByKey(&info, key)
-	if err != nil {
+	if err == sql.ErrNoRows {
 		//空则创建
 		sql := "INSERT INTO `system_info`(`key`) VALUES(:key)"
 		_, err = tx.NamedExec(sql, map[string]interface{}{

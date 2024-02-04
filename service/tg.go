@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -168,6 +169,9 @@ func (c tgConfig) firstStep() error {
 		var user model.Users
 		err = dao.GetUsersByUserId(&user, uint(intNum))
 		if err != nil {
+			if err == sql.ErrNoRows {
+				return errors.New("用户不存在[tigfffhh]")
+			}
 			return errors.New("错误[tigfhh]: " + err.Error())
 		}
 

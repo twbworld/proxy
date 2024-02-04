@@ -27,14 +27,23 @@ func Init(ginServer *gin.Engine) {
 		//http重定向
 		// ctx.Redirect(http.StatusMovedPermanently, "/404.html")
 	})
-	ginServer.GET("/404.html", func(ctx *gin.Context) {
-		ctx.HTML(200, "404.html", gin.H{"status": "404"})
+	ginServer.GET("404.html", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "404.html", gin.H{"status": "404"})
 	})
-	ginServer.GET("/40x.html", func(ctx *gin.Context) {
-		ctx.HTML(200, "404.html", gin.H{"status": "40x"})
+	ginServer.GET("40x.html", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "404.html", gin.H{"status": "40x"})
 	})
-	ginServer.GET("/50x.html", func(ctx *gin.Context) {
-		ctx.HTML(200, "404.html", gin.H{"status": "50x"})
+	ginServer.GET("50x.html", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "404.html", gin.H{"status": "50x"})
+	})
+	ginServer.POST("404.html", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusNotFound, gin.H{"code": 1, "msg": "错误[fhua]"})
+	})
+	ginServer.POST("40x.html", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusNotFound, gin.H{"code": 1, "msg": "错误[fhua]"})
+	})
+	ginServer.POST("50x.html", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusNotFound, gin.H{"code": 1, "msg": "错误[fhua]"})
 	})
 
 	wh := ginServer.Group("wh")
