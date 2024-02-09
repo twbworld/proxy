@@ -8,10 +8,8 @@ import (
 )
 
 func initConfig() {
-	struType := reflect.TypeOf(Config.AppConfig)
-	struValue := reflect.ValueOf(&Config.AppConfig).Elem()
-	arrN := struType.NumField()
-	for i := 0; i < arrN; i++ {
+	struType, struValue := reflect.TypeOf(Config.AppConfig), reflect.ValueOf(&Config.AppConfig).Elem()
+	for i := range struType.NumField() {
 		if struVal := struValue.FieldByName(struType.Field(i).Name); struVal.CanSet() {
 			struVal.SetString(struType.Field(i).Tag.Get("default")) //参数初始化
 		}
@@ -19,10 +17,8 @@ func initConfig() {
 }
 
 func initEnv(configPath string) {
-	struType := reflect.TypeOf(Config.Env.Db)
-	struValue := reflect.ValueOf(&Config.Env.Db).Elem()
-	arrN := struType.NumField()
-	for i := 0; i < arrN; i++ {
+	struType, struValue := reflect.TypeOf(Config.Env.Db), reflect.ValueOf(&Config.Env.Db).Elem()
+	for i := range struType.NumField() {
 		if struVal := struValue.FieldByName(struType.Field(i).Name); struVal.CanSet() {
 			struVal.SetString(struType.Field(i).Tag.Get("default")) //参数初始化
 		}
@@ -48,7 +44,7 @@ func initEnv(configPath string) {
 		}
 	})
 
-	// 将配置赋值给全局变量
+	// 将配置赋值给全局变量(结构体需要设置mapstructure的tag)
 	if err := v.Unmarshal(&Config.Env); err != nil {
 		panic("出错[dhfal]: " + err.Error())
 	}

@@ -56,8 +56,7 @@ func UpdateUsers(tx *sqlx.Tx, user *model.Users) (err error) {
 	if global.Config.Env.Db.Type == "sqlite" {
 		sql = "SELECT `id` FROM `users` WHERE `id`=?"
 	}
-	_, err = tx.Exec(sql, user.Id)
-	if err != nil {
+	if _, err = tx.Exec(sql, user.Id); err != nil {
 		return
 	}
 
@@ -79,12 +78,11 @@ func UpdateUsers(tx *sqlx.Tx, user *model.Users) (err error) {
 
 func UpdateUsersClear(tx *sqlx.Tx) (err error) {
 	mu.Lock()
+	defer mu.Unlock()
 
 	sql := "LOCK TABLE `users` WRITE"
 	if global.Config.Env.Db.Type == "mysql" {
-		_, err = tx.Exec(sql)
-		if err != nil {
-			mu.Unlock()
+		if _, err = tx.Exec(sql); err != nil {
 			return
 		}
 	}
@@ -92,7 +90,6 @@ func UpdateUsersClear(tx *sqlx.Tx) (err error) {
 	sql = "UPDATE `users` SET `download` = :download, `upload` = :upload"
 	_, err = tx.NamedExec(sql, gin.H{"download": 0, "upload": 0})
 	if err != nil {
-		mu.Unlock()
 		return
 	}
 
@@ -101,50 +98,40 @@ func UpdateUsersClear(tx *sqlx.Tx) (err error) {
 		_, err = tx.Exec(sql)
 	}
 
-	mu.Unlock()
-
 	return
 }
 
-func UpdateUsersExpiry(ids []uint, tx *sqlx.Tx) (err error) {
+func UpdateUsersExpiry(ids *[]uint, tx *sqlx.Tx) (err error) {
 	sql := "SELECT `id` FROM `users` WHERE `id` IN (?) FOR UPDATE"
 	if global.Config.Env.Db.Type == "sqlite" {
 		sql = "SELECT `id` FROM `users` WHERE `id` IN (?)"
 	}
-	query, args, err := sqlx.In(sql, ids)
+	query, args, err := sqlx.In(sql, *ids)
 	if err != nil {
 		return
 	}
-	query = tx.Rebind(query)
-	_, err = tx.Exec(query, args...)
-	if err != nil {
+	if _, err = tx.Exec(tx.Rebind(query), args...); err != nil {
 		return
 	}
 
 	sql = "UPDATE `users` SET `quota` = 0 WHERE `id` IN (?)"
-	query, args, err = sqlx.In(sql, ids)
+	query, args, err = sqlx.In(sql, *ids)
 	if err != nil {
 		return
 	}
-	query = tx.Rebind(query)
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return
-	}
+	_, err = tx.Exec(tx.Rebind(query), args...)
 	return
 }
 
 func InsertEmptyUsers(tx *sqlx.Tx, userName string) (err error) {
 	sql := "INSERT INTO `users`(`username`, `password`, `passwordShow`, `quota`, `download`, `upload`, `useDays`, `expiryDate`) VALUES(:username, :password, :passwordShow, :quota, :download, :upload, :useDays, :expiryDate)"
 
-	t := time.Now().AddDate(0, 1, 0)
-
 	_, err = tx.NamedExec(sql, map[string]interface{}{
 		"username":     userName,
 		"password":     utils.Hash(userName),
 		"passwordShow": utils.Base64Encode(utils.Hash(userName)),
 		"quota":        int(50 * QuotaMax),
-		"expiryDate":   t.Format(time.DateOnly),
+		"expiryDate":   time.Now().AddDate(0, 1, 0).Format(time.DateOnly),
 		"useDays":      30,
 		"download":     0,
 		"upload":       0,
@@ -164,8 +151,7 @@ func GetSysValByKey(SystemInfo *model.SystemInfo, key string) error {
 }
 
 func SaveSysVal(tx *sqlx.Tx, key string, value string) (err error) {
-	err = CheckSysVal(tx, key)
-	if err != nil {
+	if err = CheckSysVal(tx, key); err != nil {
 		return
 	}
 
@@ -173,8 +159,8 @@ func SaveSysVal(tx *sqlx.Tx, key string, value string) (err error) {
 	if global.Config.Env.Db.Type == "sqlite" {
 		sql = "SELECT `id` FROM `system_info` WHERE `key`=?"
 	}
-	_, err = tx.Exec(sql, key)
-	if err != nil {
+
+	if _, err = tx.Exec(sql, key); err != nil {
 		return
 	}
 
@@ -187,8 +173,7 @@ func SaveSysVal(tx *sqlx.Tx, key string, value string) (err error) {
 }
 func CheckSysVal(tx *sqlx.Tx, key string) (err error) {
 	var info model.SystemInfo
-	err = GetSysValByKey(&info, key)
-	if err == sql.ErrNoRows {
+	if err = GetSysValByKey(&info, key); err == sql.ErrNoRows {
 		//空则创建
 		sql := "INSERT INTO `system_info`(`key`) VALUES(:key)"
 		_, err = tx.NamedExec(sql, map[string]interface{}{

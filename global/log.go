@@ -9,9 +9,7 @@ import (
 )
 
 func initLog(runLogPath string) {
-
-	err := utils.CreateFile(runLogPath)
-	if err != nil {
+	if err := utils.CreateFile(runLogPath); err != nil {
 		panic("创建文件错误[oirdtug]: " + err.Error())
 	}
 

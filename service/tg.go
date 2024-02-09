@@ -12,15 +12,35 @@ import (
 
 	"github.com/gin-gonic/gin"
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/jmoiron/sqlx"
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model"
 )
 
-var IsTgSend bool //只允许发送一次
-
 type tgConfig struct {
 	update *tg.Update
+}
+
+var IsTgSend bool //只允许发送一次
+
+var tx *sqlx.Tx
+
+func transaction() func() {
+	var err error
+	if tx, err = dao.DB.Beginx(); err != nil {
+		panic(err)
+	}
+
+	return func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p)
+		} else if e := tx.Commit(); e != nil {
+			tx.Rollback()
+			panic(e)
+		}
+	}
 }
 
 func TgSend(text string) (err error) {
@@ -28,8 +48,7 @@ func TgSend(text string) (err error) {
 		return
 	}
 	msg := tg.NewMessage(global.Config.Env.Telegram.Id, fmt.Sprintf("[%s]%s", global.Config.AppConfig.ProjectName, text))
-	_, err = global.Bot.Send(msg)
-	if err == nil {
+	if _, err = global.Bot.Send(msg); err == nil {
 		IsTgSend = true
 	}
 	return
@@ -62,12 +81,14 @@ func (c tgConfig) handle() error {
 		//操作@用户id
 		if params := regexp.MustCompile(`(.+)@(\d+)@(.+)`).FindStringSubmatch(c.update.CallbackQuery.Data); len(params) > 3 {
 			// (对话第四步)
+			params = params[:4] //消除边界检查
 			intNum, err := strconv.Atoi(params[2])
 			if err != nil {
 				return errors.New("参数错误[oidfjgoid]")
 			}
 			return c.input(uint(intNum), params[3])
 		} else if params := regexp.MustCompile(`(.+)@(\d+)`).FindStringSubmatch(c.update.CallbackQuery.Data); len(params) > 2 {
+			params = params[:3]
 			// (对话第三步)
 			intNum, err := strconv.Atoi(params[2])
 			if err != nil {
@@ -86,9 +107,8 @@ func (c tgConfig) handle() error {
 
 func (c tgConfig) firstStep() error {
 	msg := tg.NewMessage(c.update.Message.Chat.ID, "")
-	msg.Text = "命令不存在!!!"
 	//ReplyKeyboard位于输入框下的按钮
-	msg.ReplyMarkup = tg.NewReplyKeyboard(
+	msg.Text, msg.ReplyMarkup = "命令不存在!!!", tg.NewReplyKeyboard(
 		tg.NewKeyboardButtonRow(
 			tg.NewKeyboardButton("/start"),
 		),
@@ -111,28 +131,11 @@ func (c tgConfig) firstStep() error {
 
 			if errSys == nil || info.Value != "" {
 				//初始化,清空流程码
-				tx, err := dao.DB.Beginx()
-				if err != nil {
-					return errors.New("开启事务失败[ghfgasd]: " + err.Error())
-				}
-				defer func() {
-					if p := recover(); p != nil {
-						tx.Rollback()
-						panic(p)
-					} else if err != nil {
-						tx.Rollback()
-					} else {
-						err = tx.Commit()
-						if err != nil {
-							tx.Rollback()
-							panic(err)
-						}
-					}
-				}()
+				defer transaction()()
 
-				err = dao.SaveSysVal(tx, strconv.FormatInt(c.update.Message.Chat.ID, 10)+"_step", "")
+				err := dao.SaveSysVal(tx, strconv.FormatInt(c.update.Message.Chat.ID, 10)+"_step", "")
 				if err != nil {
-					err = errors.New("开启事务失败[oierutgoe]: " + err.Error())
+					panic("开启事务失败[oierutogoe]: " + err.Error())
 				}
 			}
 
@@ -162,13 +165,14 @@ func (c tgConfig) firstStep() error {
 			return errors.New("参数错误[fijsa]")
 		}
 
+		params = params[:4]
+
 		intNum, err := strconv.Atoi(params[2])
 		if err != nil {
 			return errors.New("错误[jklsd]: " + err.Error())
 		}
 		var user model.Users
-		err = dao.GetUsersByUserId(&user, uint(intNum))
-		if err != nil {
+		if err = dao.GetUsersByUserId(&user, uint(intNum)); err != nil {
 			if err == sql.ErrNoRows {
 				return errors.New("用户不存在[tigfffhh]")
 			}
@@ -186,12 +190,9 @@ func (c tgConfig) firstStep() error {
 			} else if err != nil {
 				global.Log.Warnln("事务回滚[lghjfn]: ", err)
 				tx.Rollback()
-			} else {
-				err = tx.Commit()
-				if err != nil {
-					tx.Rollback()
-					panic(err)
-				}
+			} else if e := tx.Commit(); e != nil {
+				tx.Rollback()
+				panic("错误[osidjf]: " + e.Error())
 			}
 		}()
 
@@ -222,14 +223,12 @@ func (c tgConfig) firstStep() error {
 			return errors.New("错误[kdfhf]: " + params[3])
 		}
 
-		err = dao.UpdateUsers(tx, &user)
-		if err != nil {
+		if err = dao.UpdateUsers(tx, &user); err != nil {
 			return errors.New("错误[jkljkjkl]: " + err.Error())
 		}
 
 		//修改成功后,清空流程码
-		err = dao.SaveSysVal(tx, info.Key, "")
-		if err != nil {
+		if err = dao.SaveSysVal(tx, info.Key, ""); err != nil {
 			return errors.New("错误[asdsad]: " + err.Error())
 		}
 		msg.Text = "*修改成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(&user)
@@ -241,37 +240,42 @@ func (c tgConfig) firstStep() error {
 		msg.ParseMode = "MarkdownV2"
 	}
 SEND:
-	_, err := global.Bot.Send(msg)
-	return err
+	go func() {
+		if _, err := global.Bot.Send(msg); err != nil {
+			global.Log.Error(err)
+		}
+	}()
+	return nil
 }
 
 func (c tgConfig) selectUser() error {
+	var err error
 	switch c.update.CallbackQuery.Data {
 	case "user_select":
-		var (
-			row        []tg.InlineKeyboardButton
-			mkrow      [][]tg.InlineKeyboardButton
-			usersMysql []model.Users
-		)
-		err := dao.GetUserNames(&usersMysql)
-		if err != nil {
+		var usersMysql []model.Users
+		if err = dao.GetUserNames(&usersMysql); err != nil {
 			return errors.New("错误[lkffgdh]" + err.Error())
 		}
 		l := len(usersMysql)
+		row, mkrow := make([]tg.InlineKeyboardButton, 0, 2), make([][]tg.InlineKeyboardButton, 0, l/2+1)
 		for _, v := range usersMysql {
 			l--
 			row = append(row, tg.NewInlineKeyboardButtonData(v.Username, c.update.CallbackQuery.Data+"@"+strconv.Itoa(int(v.Id))))
 			if len(row) == 2 || l == 0 {
 				//每行两个进行展示
 				mkrow = append(mkrow, tg.NewInlineKeyboardRow(row...))
-				row = []tg.InlineKeyboardButton{}
+				row = make([]tg.InlineKeyboardButton, 0, 2)
 			}
 		}
 		msg := tg.NewEditMessageTextAndMarkup(c.update.CallbackQuery.Message.Chat.ID, c.update.CallbackQuery.Message.MessageID, "选择*查询*的用户", tg.NewInlineKeyboardMarkup(mkrow...))
 		msg.ParseMode = "MarkdownV2"
-		if _, err = global.Bot.Send(msg); err != nil {
-			return errors.New("错误[iofgjiosj]" + err.Error())
-		}
+
+		go func() {
+			if _, err := global.Bot.Send(msg); err != nil {
+				global.Log.Error("错误[iofgjiosj]" + err.Error())
+			}
+		}()
+
 	case "user_insert":
 		tx, err := dao.DB.Beginx()
 		if err != nil {
@@ -283,12 +287,9 @@ func (c tgConfig) selectUser() error {
 				panic(p)
 			} else if err != nil {
 				tx.Rollback()
-			} else {
-				err = tx.Commit()
-				if err != nil {
-					tx.Rollback()
-					panic(err)
-				}
+			} else if e := tx.Commit(); e != nil {
+				tx.Rollback()
+				panic("错误[osidjf]: " + e.Error())
 			}
 		}()
 
@@ -299,24 +300,31 @@ func (c tgConfig) selectUser() error {
 
 		msg := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "请输入用户名称, 4\\-64个字符以内的英文/数字/符号\n例:`210606_abc`")
 		msg.ParseMode = "MarkdownV2"
-		if _, err := global.Bot.Send(msg); err != nil {
-			return errors.New("错误[fgrejlk]" + err.Error())
-		}
+
+		go func() {
+			if _, err := global.Bot.Send(msg); err != nil {
+				global.Log.Error("错误[iofgjfiosj]" + err.Error())
+			}
+		}()
 
 	default:
 		msg := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "命令不存在!!!")
-		if _, err := global.Bot.Send(msg); err != nil {
-			return errors.New("错误[fdxcvjkh]" + err.Error())
-		}
+		go func() {
+			if _, err := global.Bot.Send(msg); err != nil {
+				global.Log.Error("错误[iofgsjiosj]" + err.Error())
+			}
+		}()
 	}
 
 	return nil
 }
 
 func (c tgConfig) actionType(act string, userId uint) error {
-	var user model.Users
-	err := dao.GetUsersByUserId(&user, userId)
-	if err != nil {
+	var (
+		user model.Users
+		err  error
+	)
+	if err = dao.GetUsersByUserId(&user, userId); err != nil {
 		TgSend("找不到用户")
 		return errors.New("错误[jfdsgsd]" + err.Error())
 	}
@@ -347,13 +355,20 @@ func (c tgConfig) actionType(act string, userId uint) error {
 	}
 
 SEND3:
-	_, err = global.Bot.Send(msg)
-	return err
+	go func() {
+		if _, err := global.Bot.Send(msg); err != nil {
+			global.Log.Error(err)
+		}
+	}()
+	return nil
 }
 
 func (c tgConfig) input(userId uint, value string) error {
-	var user model.Users
-	err := dao.GetUsersByUserId(&user, userId)
+	var (
+		user model.Users
+		err  error
+	)
+	err = dao.GetUsersByUserId(&user, userId)
 	if err != nil {
 		TgSend("找不到用户")
 		return errors.New("找不到用户[kysafd]")
@@ -373,9 +388,12 @@ func (c tgConfig) input(userId uint, value string) error {
 	default:
 		msg.Text = "命令不存在!!!"
 	}
-	if _, err := global.Bot.Send(msg); err != nil {
-		return errors.New("错误[kysafd]" + err.Error())
-	}
+
+	go func() {
+		if _, err := global.Bot.Send(msg); err != nil {
+			global.Log.Error("错误[iodiosj]" + err.Error())
+		}
+	}()
 
 	tx, err := dao.DB.Beginx()
 	if err != nil {
@@ -387,12 +405,9 @@ func (c tgConfig) input(userId uint, value string) error {
 			panic(p)
 		} else if err != nil {
 			tx.Rollback()
-		} else {
-			err = tx.Commit()
-			if err != nil {
-				tx.Rollback()
-				panic(err)
-			}
+		} else if e := tx.Commit(); e != nil {
+			tx.Rollback()
+			panic("错误[osidjf]: " + e.Error())
 		}
 	}()
 
@@ -412,8 +427,8 @@ func (c tgConfig) userInsert(info *model.SystemInfo) (err error) {
 			err = errors.New("错误[podghj]: " + err.Error())
 		} else if err != nil {
 			tx.Rollback()
-		} else {
-			err = tx.Commit()
+		} else if err = tx.Commit(); err != nil {
+			tx.Rollback()
 		}
 	}()
 
@@ -425,23 +440,20 @@ func (c tgConfig) userInsert(info *model.SystemInfo) (err error) {
 		goto SEND2
 	}
 
-	err = dao.GetUsersByUserName(&user, c.update.Message.Text)
-	if err == nil {
+	if err = dao.GetUsersByUserName(&user, c.update.Message.Text); err == nil {
 		msg.Text = strings.Replace(fmt.Sprintf("*用户`%s`已存在\\!\\!\\!*\n", c.update.Message.Text), `-`, `\-`, -1) + c.getUserMarkdownV2Text(&user)
 		msg.ParseMode = "MarkdownV2"
 		dao.SaveSysVal(tx, info.Key, info.Value)
 		goto SEND2
 	}
 
-	err = dao.InsertEmptyUsers(tx, c.update.Message.Text)
-	if err != nil {
+	if err = dao.InsertEmptyUsers(tx, c.update.Message.Text); err != nil {
 		msg.Text = `系统错误, 请按"/start"重新设置4`
 		dao.SaveSysVal(tx, info.Key, info.Value)
 		goto SEND2
 	}
 
-	err = dao.GetUsersByUserNameTx(tx, &user, c.update.Message.Text)
-	if err != nil {
+	if err = dao.GetUsersByUserNameTx(tx, &user, c.update.Message.Text); err != nil {
 		msg.Text = `系统错误, 请按"/start"重新设置5`
 		dao.SaveSysVal(tx, info.Key, info.Value)
 		goto SEND2
@@ -456,8 +468,12 @@ func (c tgConfig) userInsert(info *model.SystemInfo) (err error) {
 	)
 
 SEND2:
-	_, err = global.Bot.Send(msg)
-	return
+	go func() {
+		if _, err := global.Bot.Send(msg); err != nil {
+			global.Log.Error(err)
+		}
+	}()
+	return nil
 }
 
 func (c tgConfig) getUserMarkdownV2Text(user *model.Users) string {

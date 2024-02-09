@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Init(ginServer *gin.Engine) {
+func Start(ginServer *gin.Engine) {
 	ginServer.StaticFile("/favicon.ico", "static/favicon.ico")
 	ginServer.StaticFile("/robots.txt", "static/robots.txt")
 	ginServer.LoadHTMLGlob("static/*.html")
@@ -53,7 +53,7 @@ func Init(ginServer *gin.Engine) {
 
 	// gin路由不支持正则,我服了
 	regexRouter := ginregex.New(ginServer, nil)
-	regexRouter.GET(`^/(.*)\.html$`, validatorUri(), controller.Index)
+	regexRouter.GET(`^/(.*)\.html$`, validatorUri(), controller.Subscribe)
 }
 
 func validatorUri() gin.HandlerFunc {
@@ -72,9 +72,7 @@ func validatorUri() gin.HandlerFunc {
 		}
 
 		var user model.Users
-		err := dao.GetUsersByUserName(&user, userName)
-
-		if err == sql.ErrNoRows || err != nil {
+		if err := dao.GetUsersByUserName(&user, userName); err == sql.ErrNoRows || err != nil {
 			ctx.Abort()
 			ctx.Redirect(http.StatusMovedPermanently, "/404.html")
 			return

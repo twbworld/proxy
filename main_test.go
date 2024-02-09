@@ -16,13 +16,11 @@ import (
 )
 
 func TestMain(t *testing.T) {
-	global.Init()
-
-	testCases := []struct{
-		name string
+	testCases := [...]struct {
+		name   string
 		status int
-		input string
-		res string
+		input  string
+		res    string
 	}{
 		{name: "successTest", status: http.StatusOK, input: "test", res: "vless://"},
 		{name: "failTest", status: http.StatusMovedPermanently, input: "aa", res: "<a href="},
@@ -33,24 +31,23 @@ func TestMain(t *testing.T) {
 			global.Log.Println(p)
 		}
 		if dao.DB != nil {
-			err := dao.Close()
-			if err != nil {
+			if err := dao.Close(); err != nil {
 				global.Log.Println("数据库关闭出错[fyhkg]", err)
 			}
 		}
 	}()
 
-	dao.Init()
-
 	ginServer := gin.Default()
-	router.Init(ginServer)
+	router.Start(ginServer)
 
 	gin.SetMode(gin.TestMode)
 
-	for _, value := range testCases{
+	dao.Start()
 
-		t.Run(value.name, func(t *testing.T){
-			req, err := http.NewRequest(http.MethodGet, "http://localhost:80/" + value.input + ".html", nil)
+	for _, value := range testCases {
+
+		t.Run(value.name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, "http://localhost:80/"+value.input+".html", nil)
 			if err != nil {
 				log.Fatalf("报错: %v", err)
 			}
@@ -73,7 +70,5 @@ func TestMain(t *testing.T) {
 		})
 
 	}
-
-
 
 }

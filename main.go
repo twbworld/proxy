@@ -15,25 +15,20 @@ func main() {
 	flag.StringVar(&act, "a", "", `行为,默认为空,即启动服务; "clear": 清除上下行流量记录; "expiry": 处理过期用户`)
 	flag.Parse()
 
-	global.Init()
-
 	defer func() {
 		if p := recover(); p != nil {
 			global.Log.Println(p)
 		}
 		if dao.DB != nil {
-			err := dao.Close()
-			if err != nil {
+			if err := dao.Close(); err != nil {
 				global.Log.Println("数据库关闭出错[joiasjofg]", err)
 			}
 		}
 	}()
 
-	dao.Init()
-
 	switch act {
 	case "":
-		initialize.Init()
+		initialize.Start()
 	case "clear":
 		initialize.Clear()
 	case "expiry":

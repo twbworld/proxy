@@ -28,20 +28,18 @@ func Hash(str string) string {
 // 类似php的array_column($a, null, 'key')
 func ListToMap(list interface{}, key string) map[string]interface{} {
 
-	v := reflect.ValueOf(list)
-	res := make(map[string]interface{})
 	data := make([]interface{}, 0)
-	if v.Kind() != reflect.Slice {
+	if v := reflect.ValueOf(list); v.Kind() != reflect.Slice {
 		data = append(data, list)
 	} else {
-		for i := 0; i < v.Len(); i++ {
+		for i := range v.Len() {
 			data = append(data, v.Index(i).Interface())
 		}
 	}
 
+	res := make(map[string]interface{}, len(data))
 	for _, value := range data {
-		val := reflect.ValueOf(value)
-		res[val.FieldByName(key).String()] = value
+		res[reflect.ValueOf(value).FieldByName(key).String()] = value
 	}
 
 	return res
@@ -52,10 +50,8 @@ func CreateFile(path string) (err error) {
 	if err != nil && os.IsNotExist(err) {
 		paths, _ := filepath.Split(path)
 
-		_, err = os.Stat(paths)
-		if err != nil {
-			err = os.MkdirAll(paths, os.ModePerm)
-			if err != nil {
+		if _, err = os.Stat(paths); err != nil {
+			if err = os.MkdirAll(paths, os.ModePerm); err != nil {
 				return
 			}
 		}
@@ -65,7 +61,10 @@ func CreateFile(path string) (err error) {
 			return e
 		}
 		fi.Close()
+
+		return
 	}
+
 	file.Close()
 
 	return
