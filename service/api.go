@@ -237,7 +237,7 @@ func checkUser(user *model.Users) bool {
 	}
 
 	tz, e := time.LoadLocation("Asia/Shanghai")
-	t, err := time.Parse(time.DateOnly, *user.ExpiryDate)
+	t, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, tz)
 
 	return e != nil || err != nil || t.AddDate(0, 0, 1).After(time.Now().In(tz))
 }

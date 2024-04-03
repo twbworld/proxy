@@ -61,7 +61,7 @@ func Expiry() {
 	if err != nil {
 		panic("时区设置错误[pgohkf]: " + err.Error())
 	}
-	t, err := time.Parse(time.DateTime, time.Now().In(tz).Format(time.DateOnly+" 00:00:01"))
+	t, err := time.ParseInLocation(time.DateTime, time.Now().In(tz).Format(time.DateOnly+" 00:00:01"), tz)
 	if err != nil {
 		panic("时间出错[djaksofja]: " + err.Error())
 	}
@@ -72,7 +72,7 @@ func Expiry() {
 		if *value.ExpiryDate == "" || value.Id < 1 {
 			continue
 		}
-		ti, _ := time.Parse(time.DateOnly, *value.ExpiryDate)
+		ti, _ := time.ParseInLocation(time.DateOnly, *value.ExpiryDate, tz)
 		if err != nil {
 			continue
 		}
@@ -81,7 +81,7 @@ func Expiry() {
 		}
 
 		if t1.After(ti) && t2.Before(ti) {
-			service.TgSend(value.Username + "快到期" + ti.In(tz).Format(time.DateOnly))
+			service.TgSend(value.Username + "快到期" + ti.Format(time.DateOnly))
 		}
 
 	}
