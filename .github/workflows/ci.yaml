@@ -26,7 +26,7 @@ jobs:
 
   review:
     needs: test
-    uses: ./.github/workflows/review.yml
+    uses: ./.github/workflows/review.yaml
     secrets: inherit #传递所有secrets, 被调用的不需要接收
 
 
