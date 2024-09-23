@@ -1,4 +1,4 @@
-package initialize
+package task
 
 import (
 	"time"
@@ -11,22 +11,24 @@ import (
 )
 
 // 过期用户处理
-func Expiry() {
+func Expiry() error {
 	var users []db.Users
 
 	if err := dao.App.UsersDb.GetUsers(&users); err != nil {
-		global.Log.Fatalf("查询失败[fsuojnv]: %v", err)
+		global.Log.Errorf("查询失败[fsuojnv]: %v", err)
+		return err
 	}
 
 	if len(users) < 1 {
 		global.Log.Infoln("没有过期用户[gsfiod]")
-		return
+		return nil
 	}
 
 	now := time.Now().In(global.Tz)
 	t, err := time.ParseInLocation(time.DateTime, now.Format(time.DateOnly+" 00:00:01"), global.Tz)
 	if err != nil {
-		panic("时间出错[djaksofja]: " + err.Error())
+		global.Log.Errorf("时间出错[djaksofja]: %v", err)
+		return err
 	}
 	t1, t2 := now.AddDate(0, 0, -7), time.Now().In(global.Tz).AddDate(0, 0, -5)
 
@@ -49,7 +51,7 @@ func Expiry() {
 	}
 	if len(ids) == 0 {
 		global.Log.Infoln("没有过期用户[ofijsdfio]")
-		return
+		return nil
 	}
 
 	err = dao.Tx(func(tx *sqlx.Tx) (e error) {
@@ -57,8 +59,10 @@ func Expiry() {
 	})
 
 	if err != nil {
-		global.Log.Fatalf("更新用户过期状态失败: %v", err)
+		global.Log.Errorln("更新用户过期状态失败[4r789s]", ids, err)
+		return err
 	}
 
-	global.Log.Infoln("[Expiry]过期用户处理: ", ids)
+	global.Log.Infoln("成功处理过期用户[weou89]: ", ids)
+	return nil
 }

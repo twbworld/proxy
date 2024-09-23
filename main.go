@@ -7,6 +7,7 @@ import (
 	"github.com/twbworld/proxy/initialize"
 	initGlobal "github.com/twbworld/proxy/initialize/global"
 	"github.com/twbworld/proxy/initialize/system"
+	"github.com/twbworld/proxy/task"
 )
 
 func main() {
@@ -25,9 +26,9 @@ func main() {
 	case "":
 		initialize.Start()
 	case "clear":
-		initialize.Clear()
+		task.Clear()
 	case "expiry":
-		initialize.Expiry()
+		task.Expiry()
 	default:
 		log.Println("参数可选: clear|expiry")
 	}

@@ -20,7 +20,7 @@
 
 ## 目录结构 : 
 ``` sh
-├── clash.yaml               #clash配置模板
+├── clash.yaml              #clash配置模板
 ├── config.example.yaml     #以其为例, 自行创建config.yaml
 ├── controller/
 │   ├── admin/              #后台api
@@ -39,10 +39,8 @@
 ├── go.mod
 ├── go.sum
 ├── initialize/             #服务初始化相关
-│   ├── clear.go            
-│   ├── expiry.go
-│   ├── global/
 │   ├── server.go           #gin服务
+│   ├── global/
 │   └── system/
 ├── LICENSE
 ├── log/
@@ -65,7 +63,9 @@
 │       ├── tg.go           #与telegram-bot交互的逻辑
 │       └── validator.go
 ├── static/                 #静态资源
-├── task/                   #定时任务
+├── task/                   #任务
+│   ├── clear.go            #流量清零
+│   └── expiry.go           #过期用户处理
 └── utils/
     └── tool.go
 ```

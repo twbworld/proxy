@@ -1,5 +1,0 @@
-package task
-
-func Clean() {
-
-}

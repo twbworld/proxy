@@ -3,46 +3,40 @@ package system
 import (
 	"github.com/robfig/cron/v3"
 	"github.com/twbworld/proxy/global"
-	"github.com/twbworld/proxy/initialize"
 	"github.com/twbworld/proxy/service"
-	// "github.com/twbworld/proxy/task"
+	"github.com/twbworld/proxy/task"
 )
 
 var c *cron.Cron
 
-func timerStart() (err error) {
+// startCronJob 启动一个新的定时任务
+func startCronJob(schedule string, task func() error, name string) error {
+	_, err := c.AddFunc(schedule, func() {
+		defer func() {
+			text := "任务完成"
+			if p := recover(); p != nil {
+				text = "任务出错[gqxj]: " + p.(string)
+			}
+			service.Service.UserServiceGroup.TgService.TgSend(name + text)
+		}()
+		if err := task(); err != nil {
+			panic(err)
+		}
+	})
+	return err
+}
+
+func timerStart() error {
 	c = cron.New([]cron.Option{
 		cron.WithLocation(global.Tz),
 		// cron.WithSeconds(), //精确到秒
 	}...)
 
-	_, err = c.AddFunc("0 0 1 * *", func() {
-		defer func() {
-			text := "流量清零任务完成"
-			if p := recover(); p != nil {
-				global.Log.Errorln("流量清零任务出错[gqnoj]: ", p)
-				text = "流量清零任务出错[gqnoj]: " + p.(string)
-			}
-			service.Service.UserServiceGroup.TgService.TgSend(text)
-		}()
-		initialize.Clear()
-	})
-	if err != nil {
+	if err := startCronJob("0 0 1 * *", task.Clear, "流量清零"); err != nil {
 		return err
 	}
 
-	_, err = c.AddFunc("0 16 * * *", func() {
-		defer func() {
-			text := "处理过期用户任务完成"
-			if p := recover(); p != nil {
-				global.Log.Errorln("处理过期用户任务出错[54jni3]: ", p)
-				text = "处理过期用户任务出错[54jni3]: " + p.(string)
-			}
-			service.Service.UserServiceGroup.TgService.TgSend(text)
-		}()
-		initialize.Expiry()
-	})
-	if err != nil {
+	if err := startCronJob("0 0 * * *", task.Expiry, "处理过期用户"); err != nil {
 		return err
 	}
 
