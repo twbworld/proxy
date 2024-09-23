@@ -27,8 +27,8 @@ jobs:
       # - name: save-data
       #   run: sudo mysql -uroot -h 127.0.0.1 < dao/db.sql
 
-      - name: add-envFile
-        run: sudo cp config/.env.example config/.env
+      - name: add-configFile
+        run: sudo cp config.example.yaml config.yaml
 
       - name: Set up Go
         uses: actions/setup-go@v5

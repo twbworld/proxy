@@ -3,17 +3,15 @@ on:
   workflow_dispatch: #github页面手动触发
   workflow_call: #允许其他workflow调用
   push: #push即触发
-    branches: #分支要写上, 否则上传tags会执行workflow两次
-      - main
-      - dev
+    branches: #只允许分支(branches)类型的push, 否则遇到tags类型的push,当前workflow也会生效
+      - '*'
     paths-ignore: #不作为触发的文件
       - '.*'
       - 'LICENSE'
       - 'Dockerfile'
   pull_request:
     branches:
-      - main
-      - dev
+      - '*'
     paths-ignore:
       - '.*'
       - 'LICENSE'

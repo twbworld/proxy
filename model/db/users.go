@@ -1,6 +1,5 @@
-package model
+package db
 
-// 可能为null的字段, 用指针
 type Users struct {
 	Id           uint    `db:"id" json:"id"`
 	Username     string  `db:"username" json:"username"`
@@ -11,4 +10,8 @@ type Users struct {
 	Upload       uint    `db:"upload" json:"upload"`
 	UseDays      *int    `db:"useDays" json:"useDays"`
 	ExpiryDate   *string `db:"expiryDate" json:"expiryDate"`
+}
+
+func (Users) TableName() string {
+	return `users`
 }

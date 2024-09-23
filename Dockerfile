@@ -1,5 +1,5 @@
 ##编译
-FROM --platform=$TARGETPLATFORM golang:1.23 AS builder
+FROM golang:1.23 AS builder
 WORKDIR /app
 ARG TARGETARCH
 ENV GO111MODULE=on
@@ -9,11 +9,11 @@ RUN go mod download
 COPY . .
 #go-sqlite3需要cgo编译; 且使用完全静态编译, 否则需依赖外部安装的glibc
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -ldflags "-s -w --extldflags '-static -fpic'" -o server . && \
-    mv config/.env.example config/clash.ini server /app/static
+    mv config.example.yaml clash.ini server /app/static
 
 
 ##打包镜像
-FROM --platform=$TARGETPLATFORM alpine
+FROM alpine:latest
 LABEL org.opencontainers.image.vendor="忐忑"
 LABEL org.opencontainers.image.authors="1174865138@qq.com"
 LABEL org.opencontainers.image.description="用于管理翻墙系统用户和订阅"
@@ -22,9 +22,8 @@ WORKDIR /app
 COPY --from=builder /app/static/ static/
 RUN set -xe && \
     mkdir -p dao config && \
-    mv static/.env.example config/.env && \
-    mv static/clash.ini config && \
-    mv static/server server && \
+    mv static/config.example.yaml config.yaml && \
+    mv static/clash.ini static/server . && \
     chmod +x server && \
     # sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
     apk update && \

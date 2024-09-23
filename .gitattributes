@@ -1,7 +1,6 @@
 # github显示的默认语言
 
-*.vue linguist-language=js
-
+*.sql linguist-language=Go
 
 
 # 以下设置作用: 制定换行符规则

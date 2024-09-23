@@ -71,6 +71,8 @@ ehthumbs_vista.db
 /bower_components
 .eslintcache
 .env
+/config.yaml
+/*.db
 
 
 /worktree*/
@@ -78,4 +80,6 @@ ehthumbs_vista.db
 /tests/report/*
 tmp/
 /server
+/wechat/
 !.gitkeep
+static/*/
