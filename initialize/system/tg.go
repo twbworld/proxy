@@ -8,7 +8,7 @@ import (
 )
 
 func tgStart() error {
-	if global.Config.Debug || len(global.Config.Telegram.Token) < 1 {
+	if global.Config.Debug || global.Config.Telegram.Token == "" {
 		global.Log.Warnln("Telegram服务未启动: Debug模式或Token为空")
 		return nil
 	}
@@ -28,22 +28,24 @@ func tgStart() error {
 		return fmt.Errorf("设置Command失败[ofoan]: %w", err)
 	}
 
-	if global.Config.Domain != "" {
-		wh, _ := tg.NewWebhook(fmt.Sprintf(`%s/wh/tg/%s`, global.Config.Domain, global.Bot.Token))
-		if _, err = global.Bot.Request(wh); err != nil {
-			return fmt.Errorf("设置webhook失败: %w", err)
-		}
-
-		info, err := global.Bot.GetWebhookInfo()
-		if err != nil {
-			return fmt.Errorf("获取webhook失败: %w", err)
-		}
-
-		if info.LastErrorDate != 0 {
-			return fmt.Errorf("获取tg信息错误[9e0rtji]: %s", info.LastErrorMessage)
-		}
-		global.Log.Printf("成功配置tg[doiasjo]: %s", global.Bot.Self.UserName)
+	if global.Config.Domain == "" {
+		return fmt.Errorf("配置缺失[654n4]")
 	}
+
+	wh, _ := tg.NewWebhook(fmt.Sprintf(`%s/wh/tg/%s`, global.Config.Domain, global.Bot.Token))
+	if _, err = global.Bot.Request(wh); err != nil {
+		return fmt.Errorf("设置webhook失败: %w", err)
+	}
+
+	info, err := global.Bot.GetWebhookInfo()
+	if err != nil {
+		return fmt.Errorf("获取webhook失败: %w", err)
+	}
+	if info.LastErrorDate != 0 {
+		return fmt.Errorf("获取tg信息错误[9e0rtji]: %s", info.LastErrorMessage)
+	}
+
+	global.Log.Printf("成功配置tg[doiasjo]: %s", global.Bot.Self.UserName)
 	return nil
 }
 

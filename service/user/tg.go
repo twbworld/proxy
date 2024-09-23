@@ -54,12 +54,15 @@ func (t *TgService) TgSend(text string) (err error) {
 }
 
 func (t *TgService) Webhook(ctx *gin.Context) (err error) {
-	var c tgConfig
-	if err = json.NewDecoder(ctx.Request.Body).Decode(c.update); err != nil {
+	tc := &tgConfig{
+		update: &tg.Update{},
+	}
+
+	if err = json.NewDecoder(ctx.Request.Body).Decode(tc.update); err != nil {
 		return
 	}
 
-	return c.handle()
+	return tc.handle()
 }
 
 func (c *tgConfig) handle() error {
