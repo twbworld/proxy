@@ -9,7 +9,7 @@ RUN go mod download
 COPY . .
 #go-sqlite3需要cgo编译; 且使用完全静态编译, 否则需依赖外部安装的glibc
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -ldflags "-s -w --extldflags '-static -fpic'" -o server . && \
-    mv config.example.yaml clash.ini server /app/static
+    mv config.example.yaml clash.yaml server /app/static
 
 
 ##打包镜像
@@ -21,9 +21,8 @@ LABEL org.opencontainers.image.source="https://github.com/twbworld/proxy"
 WORKDIR /app
 COPY --from=builder /app/static/ static/
 RUN set -xe && \
-    mkdir -p dao config && \
     mv static/config.example.yaml config.yaml && \
-    mv static/clash.ini static/server . && \
+    mv static/clash.yaml static/server . && \
     chmod +x server && \
     # sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
     apk update && \

@@ -7,7 +7,7 @@ gin_addr: :80
 #访问项目的域名,端口默认80(如webhook所用)
 domain: https://www.domain.com
 #clash默认配置文件
-clash_path: clash.ini
+clash_path: clash.yaml
 #放置静态文件的目录
 static_dir: static
 # gin日志文件
@@ -16,6 +16,31 @@ gin_log_path: log/gin.log
 run_log_path: log/run.log
 # 时区
 tz: Asia/Shanghai
+# 数据库配置
+database:
+  #数据库类型(sqlite|mysql); 小应用sqlite, 大应用mysql
+  type: sqlite
+  #sqlite文件路径
+  sqlite_path: "proxy.db"
+  # mysql地址
+  mysql_host: ""
+  # mysql端口
+  mysql_port: 3306
+  # mysql数据库名
+  mysql_dbname: ""
+  # mysql用户名
+  mysql_username: ""
+  # mysql密码
+  mysql_password: ""
+# Telegram聊天室配置
+telegram:
+  # 聊天室token(BotFather创建)
+  token: "0123456789:AAxxxx"
+  # 用户id(userinfobot获取)
+  id: 123456789
+# 允许跨域的域名
+cors:
+  - "*"
 proxy:
   - name: VLESS-TCP-XTLS-Vision-REALITY
     type: vless
@@ -54,28 +79,3 @@ proxy:
       path: /trojan-go-ws/
       headers:
         host: www.domain5.com
-# 数据库配置
-database:
-  #数据库类型(sqlite|mysql); 小应用sqlite, 大应用mysql
-  type: sqlite
-  #sqlite文件路径
-  sqlite_path: "proxy.db"
-  # mysql地址
-  mysql_host: ""
-  # mysql端口
-  mysql_port: 3306
-  # mysql数据库名
-  mysql_dbname: ""
-  # mysql用户名
-  mysql_username: ""
-  # mysql密码
-  mysql_password: ""
-# Telegram聊天室配置
-telegram:
-  # 聊天室token(BotFather创建)
-  token: "0123456789:AAxxxx"
-  # 用户id(userinfobot获取)
-  id: 123456789
-# 允许跨域的域名
-cors:
-  - "*"

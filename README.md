@@ -20,7 +20,7 @@
 
 ## 目录结构 : 
 ``` sh
-├── clash.ini               #clash配置模板
+├── clash.yaml               #clash配置模板
 ├── config.example.yaml     #以其为例, 自行创建config.yaml
 ├── controller/
 │   ├── admin/              #后台api

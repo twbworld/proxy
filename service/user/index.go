@@ -78,7 +78,7 @@ proxy-groups: [{name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["
 		return ""
 	}
 
-	replacer := strings.NewReplacer(`%proxies%`, "["+strings.Trim(proxies.String(), ",")+"]", `%proxies_name%`, string(bn))
+	replacer := strings.NewReplacer(`[proxies]`, "["+strings.Trim(proxies.String(), ",")+"]", `[proxies_name]`, string(bn))
 
 	return replacer.Replace(string(fres))
 }

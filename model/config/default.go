@@ -11,8 +11,8 @@ type Config struct {
 	GinLogPath  string   `json:"gin_log_path" mapstructure:"gin_log_path" yaml:"gin_log_path"`
 	RunLogPath  string   `json:"run_log_path" mapstructure:"run_log_path" yaml:"run_log_path"`
 	Tz          string   `json:"tz" mapstructure:"tz" yaml:"tz"`
-	Proxy       []Proxy  `json:"proxy" mapstructure:"proxy" yaml:"proxy"`
 	Database    Database `json:"database" mapstructure:"database" yaml:"database"`
 	Telegram    Telegram `json:"telegram" mapstructure:"telegram" yaml:"telegram"`
 	Cors        []string `json:"cors" mapstructure:"cors" yaml:"cors"`
+	Proxy       []Proxy  `json:"proxy" mapstructure:"proxy" yaml:"proxy"`
 }
