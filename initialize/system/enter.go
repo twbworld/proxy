@@ -4,9 +4,6 @@ type systemRes struct{}
 
 // 启动系统资源
 func Start() *systemRes {
-	if err := DbStart(); err != nil {
-		panic(err)
-	}
 	if err := tgStart(); err != nil {
 		panic(err)
 	}
@@ -18,9 +15,6 @@ func Start() *systemRes {
 
 // 关闭系统资源
 func (*systemRes) Stop() {
-	if err := DbClose(); err != nil {
-		panic(err)
-	}
 	if err := tgClear(); err != nil {
 		panic(err)
 	}

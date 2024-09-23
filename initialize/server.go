@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/twbworld/proxy/global"
+	"github.com/twbworld/proxy/initialize/system"
 	"github.com/twbworld/proxy/router"
 	"github.com/twbworld/proxy/service"
 	"github.com/twbworld/proxy/utils"
@@ -30,6 +31,9 @@ func InitializeLogger() {
 }
 
 func Start() {
+	sys := system.Start()
+	defer sys.Stop()
+
 	initializeGinServer()
 	//协程启动服务
 	go startServer()
