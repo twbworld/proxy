@@ -110,7 +110,7 @@ func (c *clash) getConfig(value *config.Proxy) any {
 
 	switch {
 	case value.Type == "vless" && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "":
-		// VLESS-TCP-TLS-WS
+		// VLESS-WS-TLS
 		return common.ClashVlessWs{Proxy: value}
 	case value.Type == "vless" && value.Flow == "xtls-rprx-vision" && value.RealityOpts.PublicKey != "":
 		// VLESS-TCP-XTLS-Vision-REALITY
@@ -119,7 +119,7 @@ func (c *clash) getConfig(value *config.Proxy) any {
 		// VLESS-TCP-XTLS-Vision
 		return common.ClashVlessVision{Proxy: value}
 	case value.Type == "trojan" && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "":
-		// TROJAN-TCP-TLS-WS
+		// TROJAN-WS-TLS
 		trojan := common.ClashTrojanWs{Proxy: value}
 		trojan.Password = value.Uuid
 		return trojan
@@ -160,7 +160,7 @@ func (x *xray) getConfig(value *config.Proxy) string {
 
 	switch {
 	case (value.Type == "vless" || value.Type == "trojan") && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "":
-		// VLESS-TCP-TLS-WS || TROJAN-TCP-TLS-WS
+		// VLESS-WS-TLS || TROJAN-WS-TLS
 		link.WriteString("&alpn=")
 		link.WriteString(strings.Join(value.Alpn, ","))
 		link.WriteString("&host=")

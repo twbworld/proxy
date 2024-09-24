@@ -48,18 +48,26 @@ type Telegram struct {
 }
 
 func (p *Proxy) SetProxyDefault() {
-	domain := p.Server
-	if p.WsOpts.Headers.Host != "" {
-		//如果套cdn,则避免host不等于server(使用了优选ip)
-		domain = p.WsOpts.Headers.Host
+	domain := p.WsOpts.Headers.Host
+	if domain == "" {
+		//套cdn(如使用优选ip),则host/sni不等于server
+		//PS: 这可判断Server是否为域名
+		domain = p.Server
+		p.WsOpts.Headers.Host = domain
 	}
-
-	p.Name = fmt.Sprintf("外网信息复杂_理智分辨真假_%s_%s", p.Server, p.Port)
+	if p.Sni == "" && domain != "" {
+		p.Sni = domain
+	}
+	if p.Name == "" {
+		p.Name = fmt.Sprintf("外网信息复杂_理智分辨真假_%s_%s", p.Server, p.Port)
+	}
+	if p.ClientFingerprint == "" {
+		p.ClientFingerprint = "chrome"
+	}
+	if len(p.Alpn) == 0 {
+		p.Alpn = []string{"h2", "http/1.1"}
+	}
 	p.Tls = true
 	p.Udp = true
-	p.SkipCertVerify = false
-	p.ClientFingerprint = "chrome"
-	p.Alpn = []string{"h2", "http/1.1"}
-	p.Sni = domain
-	p.WsOpts.Headers.Host = domain
+	// p.SkipCertVerify = false
 }

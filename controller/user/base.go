@@ -4,15 +4,12 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"net/http"
-	"regexp"
 
 	"github.com/twbworld/proxy/model/db"
 	"github.com/twbworld/proxy/service"
 )
 
 type BaseApi struct{}
-
-var urlPattern = regexp.MustCompile(`^/(.*)\.html$`)
 
 func (b *BaseApi) Subscribe(ctx *gin.Context) {
 	user := ctx.MustGet(`user`).(*db.Users)

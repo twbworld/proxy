@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/initialize"
@@ -32,7 +32,7 @@ func main() {
 	case "expiry":
 		task.Expiry()
 	default:
-		log.Println("参数可选: clear|expiry")
+		fmt.Println("参数可选: clear|expiry")
 	}
 
 }

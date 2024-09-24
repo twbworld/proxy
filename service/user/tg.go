@@ -25,7 +25,12 @@ type tgConfig struct {
 	update *tg.Update
 }
 
-var lock sync.RWMutex
+var (
+	step3Regex    = regexp.MustCompile(`(.+)@(\d+)`)
+	step4Regex    = regexp.MustCompile(`(.+)@(\d+)@(.+)`)
+	userNameRegex = regexp.MustCompile("^[a-zA-Z0-9_-]{4,64}$")
+	lock          sync.RWMutex
+)
 
 // 向Tg发送信息(请用协程执行)
 func (t *TgService) TgSend(text string) (err error) {
@@ -80,7 +85,7 @@ func (c *tgConfig) handle() error {
 		}
 
 		//操作@用户id
-		if params := regexp.MustCompile(`(.+)@(\d+)@(.+)`).FindStringSubmatch(data); len(params) > 3 {
+		if params := step4Regex.FindStringSubmatch(data); len(params) > 3 {
 			// (对话第四步)
 			params = params[:4] //消除边界检查
 			intNum, err := strconv.Atoi(params[2])
@@ -88,7 +93,7 @@ func (c *tgConfig) handle() error {
 				return errors.New("参数错误[oidfjgoid]")
 			}
 			return c.input(uint(intNum), params[3])
-		} else if params := regexp.MustCompile(`(.+)@(\d+)`).FindStringSubmatch(data); len(params) > 2 {
+		} else if params := step3Regex.FindStringSubmatch(data); len(params) > 2 {
 			params = params[:3]
 			// (对话第三步)
 			intNum, err := strconv.Atoi(params[2])
@@ -162,7 +167,7 @@ func (c *tgConfig) firstStep() error {
 			return c.userInsert(&info)
 		}
 
-		params := regexp.MustCompile(`(.+)@(\d+)@(.+)`).FindStringSubmatch(info.Value)
+		params := step4Regex.FindStringSubmatch(info.Value)
 		if len(params) < 4 {
 			return errors.New("参数错误[fijsa]")
 		}
@@ -388,7 +393,7 @@ func (c *tgConfig) userInsert(info *db.SystemInfo) (err error) {
 	msg.ReplyToMessageID = c.update.Message.MessageID //引用对话
 
 	var user db.Users
-	if ok, _ := regexp.MatchString("^[a-zA-Z0-9_-]{4,64}$", c.update.Message.Text); !ok {
+	if !userNameRegex.MatchString(c.update.Message.Text) {
 		msg.Text = "请输入用户名称, 64个字符以内的英文/数字/字符\n例:`210606_abc`"
 		msg.ParseMode = "MarkdownV2"
 

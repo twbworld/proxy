@@ -20,7 +20,7 @@ func (s *SystemInfoDb) GetSysValByKey(SystemInfo *db.SystemInfo, key string, tx 
 	return DB.Get(SystemInfo, sql, key)
 }
 
-func (s *SystemInfoDb) SaveSysVal(key string, value string, tx *sqlx.Tx) (err error) {
+func (s *SystemInfoDb) SaveSysVal(key, value string, tx *sqlx.Tx) (err error) {
 	if tx == nil {
 		return errors.New("请使用事务[ios58ja]")
 	}

@@ -42,18 +42,10 @@ telegram:
 cors:
   - "*"
 proxy:
-  - name: VLESS-TCP-XTLS-Vision-REALITY
-    type: vless
-    server: www.domain2.com
+  # VLESS-TCP-XTLS-Vision-REALITY
+  - type: vless
+    server: www.domain.com
     port: 443
-    tls: true
-    udp: true
-    skip-cert-verify: false
-    client-fingerprint: chrome
-    alpn:
-      - h2
-      - http/1.1
-    sni: www.domain3.com
     uuid: xxxx
     flow: xtls-rprx-vision
     network: tcp
@@ -61,21 +53,23 @@ proxy:
       public-key: xxxx
       short-id: ""
     root: true
+  # VLESS-WS-TLS
   - type: vless
     server: x.x.x.x
     port: 443
     uuid: xxxx
     network: ws
     ws-opts:
-      path: /ws-path
+      path: /vless-ws
       headers:
-        - host: www.domain4.com
+        host: www.domain.com
+  # TROJAN-WS-TLS
   - type: trojan
-    server: x.x.x.x
+    server: www.domain.com
     port: 443
     uuid: password
     network: ws
     ws-opts:
       path: /trojan-go-ws/
       headers:
-        host: www.domain5.com
+        host: www.domain.com

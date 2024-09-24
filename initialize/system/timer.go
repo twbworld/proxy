@@ -10,7 +10,7 @@ import (
 var c *cron.Cron
 
 // startCronJob 启动一个新的定时任务
-func startCronJob(schedule string, task func() error, name string) error {
+func startCronJob(task func() error, schedule, name string) error {
 	_, err := c.AddFunc(schedule, func() {
 		defer func() {
 			text := "任务完成"
@@ -32,11 +32,11 @@ func timerStart() error {
 		// cron.WithSeconds(), //精确到秒
 	}...)
 
-	if err := startCronJob("0 0 1 * *", task.Clear, "流量清零"); err != nil {
+	if err := startCronJob(task.Clear, "0 0 1 * *", "流量清零"); err != nil {
 		return err
 	}
 
-	if err := startCronJob("0 0 * * *", task.Expiry, "处理过期用户"); err != nil {
+	if err := startCronJob(task.Expiry, "0 0 * * *", "处理过期用户"); err != nil {
 		return err
 	}
 
