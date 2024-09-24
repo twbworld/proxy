@@ -3,8 +3,8 @@ package config
 import "fmt"
 
 type RealityOpts struct {
-	PublicKey string `json:"public-key" mapstructure:"public_key" yaml:"public_key"`
-	ShortId   string `json:"short-id" mapstructure:"short_id" yaml:"short_id"`
+	PublicKey string `json:"public-key" mapstructure:"public-key" yaml:"public-key"`
+	ShortId   string `json:"short-id" mapstructure:"short-id" yaml:"short-id"`
 }
 type WsOpts struct {
 	Path    string  `json:"path" mapstructure:"path" yaml:"path"`
@@ -20,15 +20,15 @@ type Proxy struct {
 	Port              string      `json:"port" mapstructure:"port" yaml:"port"`
 	Tls               bool        `json:"tls" mapstructure:"tls" yaml:"tls"`
 	Udp               bool        `json:"udp" mapstructure:"udp" yaml:"udp"`
-	SkipCertVerify    bool        `json:"skip-cert-verify" mapstructure:"skip_cert_verify" yaml:"skip_cert_verify"`
-	ClientFingerprint string      `json:"client-fingerprint" mapstructure:"client_fingerprint" yaml:"client_fingerprint"`
+	SkipCertVerify    bool        `json:"skip-cert-verify" mapstructure:"skip-cert-verify" yaml:"skip-cert-verify"`
+	ClientFingerprint string      `json:"client-fingerprint" mapstructure:"client-fingerprint" yaml:"client-fingerprint"`
 	Alpn              []string    `json:"alpn" mapstructure:"alpn" yaml:"alpn"`
 	Sni               string      `json:"sni" mapstructure:"sni" yaml:"sni"`
 	Uuid              string      `json:"uuid" mapstructure:"uuid" yaml:"uuid"`
 	Flow              string      `json:"flow" mapstructure:"flow" yaml:"flow"`
 	Network           string      `json:"network" mapstructure:"network" yaml:"network"`
-	RealityOpts       RealityOpts `json:"reality-opts" mapstructure:"reality_opts" yaml:"reality_opts"`
-	WsOpts            WsOpts      `json:"ws-opts" mapstructure:"ws_opts" yaml:"ws_opts"`
+	RealityOpts       RealityOpts `json:"reality-opts" mapstructure:"reality-opts" yaml:"reality-opts"`
+	WsOpts            WsOpts      `json:"ws-opts" mapstructure:"ws-opts" yaml:"ws-opts"`
 	Root              bool        `json:"root,omitempty" mapstructure:"root" yaml:"root"`
 }
 

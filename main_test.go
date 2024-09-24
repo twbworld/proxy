@@ -46,9 +46,9 @@ func TestMain(t *testing.T) {
 		contentType string
 	}{
 		{method: http.MethodGet, url: "http://clash.domain.com/test.html", getRes: `proxies: [{"name":"外网信息复杂_理智分辨真假_www.domain.com_443","type":"vless"`},
-		{method: http.MethodGet, url: "http://domain.com/test.html", getRes: utils.Base64Encode(`vless://xxxx@www.domain.com:443?encryption=none&headerType=none&sni=www.domain.com&fp=chrome&type=tcp&alpn=h2,http/1.1&flow=xtls-rprx-vision&security=tls#外网信息复杂_理智分辨真假_www.domain.com_443
-vless://xxxx@x.x.x.x:443?encryption=none&headerType=none&sni=x.x.x.x&fp=chrome&type=ws#外网信息复杂_理智分辨真假_x.x.x.x_443
-trojan://password@www.domain.com:443?encryption=none&headerType=none&sni=www.domain.com&fp=chrome&type=ws&alpn=h2,http/1.1&security=tls#外网信息复杂_理智分辨真假_www.domain.com_443`)},
+		{method: http.MethodGet, url: "http://domain.com/test.html", getRes: utils.Base64Encode(`vless://xxxx@www.domain.com:443?encryption=none&headerType=none&sni=www.domain.com&fp=chrome&type=tcp&flow=xtls-rprx-vision&pbk=xxxx&sid=&security=reality#外网信息复杂_理智分辨真假_www.domain.com_443
+vless://xxxx@x.x.x.x:443?encryption=none&headerType=none&sni=www.domain.com&fp=chrome&type=ws&alpn=h2,http/1.1&host=www.domain.com&path=/vless-ws&security=tls#外网信息复杂_理智分辨真假_x.x.x.x_443
+trojan://password@www.domain.com:443?encryption=none&headerType=none&sni=www.domain.com&fp=chrome&type=ws&alpn=h2,http/1.1&host=www.domain.com&path=/trojan-go-ws/&security=tls#外网信息复杂_理智分辨真假_www.domain.com_443`)},
 		{method: http.MethodGet, url: "http://domain.com/aa.html", status: http.StatusMovedPermanently, getRes: `<a href="/404.html">`},
 	}
 
