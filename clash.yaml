@@ -273,6 +273,7 @@ proxy-groups:
       - DIRECT
 rules:
   - DOMAIN-SUFFIX,bing.com,🚀 节点选择
+  - DOMAIN,copilot.microsoft.com,🚀 节点选择
   - DOMAIN-SUFFIX,douyucdn.cn,🎯 全球直连
   - DOMAIN-SUFFIX,douyucdn.com,🎯 全球直连
   - DOMAIN-SUFFIX,dcloud.io,🎯 全球直连
