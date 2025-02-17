@@ -33,8 +33,11 @@ func (b *BaseService) SetProtocol(t string) class {
 func (c *clash) Handle(user *db.Users) string {
 
 	if !checkUser(user) {
-		return `proxies: [{name: "!!! 订阅已过期 !!!", type: trojan, server: cn.bing.com, port: 80, password: 0, network: tcp}]
-proxy-groups: [{name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["!!! 订阅已过期 !!!"]}, {name: "🎯 全球直连", type: select, proxies: ["!!! 订阅已过期 !!!"]}]`
+		return `proxies:
+  - {name: "!!! 订阅已过期 !!!", type: trojan, server: cn.bing.com, port: 80, password: 0, network: tcp}
+proxy-groups:
+  - {name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["!!! 订阅已过期 !!!"]}
+  - {name: "🎯 全球直连", type: select, proxies: ["!!! 订阅已过期 !!!"]}`
 	}
 
 	if len(global.Config.Proxy) < 1 || !utils.FileExist(global.Config.ClashPath) {
@@ -59,8 +62,8 @@ proxy-groups: [{name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["
 			continue
 		}
 
+		proxies.WriteString("\n  - ") //yaml格式
 		proxies.Write(b)
-		proxies.WriteString(",")
 		proxiesName = append(proxiesName, value.Name)
 	}
 
@@ -78,7 +81,7 @@ proxy-groups: [{name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["
 		return ""
 	}
 
-	replacer := strings.NewReplacer(`[proxies]`, "["+strings.Trim(proxies.String(), ",")+"]", `[proxies_name]`, string(bn))
+	replacer := strings.NewReplacer(` [proxies]`, proxies.String(), `[proxies_name]`, string(bn))
 
 	return replacer.Replace(string(fres))
 }

@@ -29,12 +29,13 @@ func TestClashHandle(t *testing.T) {
 	proxy := config.Proxy{Type: "vless", Server: "server1", Port: "443", Flow: "xtls-rprx-vision", RealityOpts: config.RealityOpts{PublicKey: "xxx"}}
 	global.Config.Proxy = []config.Proxy{proxy}
 	global.Config.ClashPath = "test_clash.yaml"
-	os.WriteFile(global.Config.ClashPath, []byte(`[proxies_name]|[proxies]`), 0644)
+	os.WriteFile(global.Config.ClashPath, []byte(`[proxies_name] [proxies]`), 0644)
 	defer os.Remove(global.Config.ClashPath)
 
 	c := &clash{}
 	result := c.Handle(user)
-	assert.Contains(t, result, fmt.Sprintf(`["外网信息复杂_理智分辨真假_%s_%s"]|[`, proxy.Server, proxy.Port))
+	assert.Contains(t, result, fmt.Sprintf(`["外网信息复杂_理智分辨真假_%s_%s"]
+  - {`, proxy.Server, proxy.Port))
 	assert.Contains(t, result, fmt.Sprintf(`"flow":"%s"`, proxy.Flow))
 	assert.Contains(t, result, fmt.Sprintf(`"reality-opts":{"public-key":"%s"`, proxy.RealityOpts.PublicKey))
 }

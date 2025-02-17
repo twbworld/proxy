@@ -23,7 +23,7 @@ import (
 
 func TestMain(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	initGlobal.New().Start()
+	initGlobal.New("config.example.yaml").Start()
 	if err := system.DbStart(); err != nil {
 		t.Fatal("数据库连接失败[fsj09]", err)
 	}
@@ -45,7 +45,8 @@ func TestMain(t *testing.T) {
 		postData    interface{}
 		contentType string
 	}{
-		{method: http.MethodGet, url: "http://clash.domain.com/test.html", getRes: `proxies: [{"name":"外网信息复杂_理智分辨真假_www.domain.com_443","type":"vless"`},
+		{method: http.MethodGet, url: "http://clash.domain.com/test.html", getRes: `proxies:
+  - {"name":"外网信息复杂_理智分辨真假_www.domain.com_443","type":"vless"`},
 		{method: http.MethodGet, url: "http://domain.com/test.html", getRes: utils.Base64Encode(`vless://xxxx@www.domain.com:443?encryption=none&headerType=none&sni=www.domain.com&fp=chrome&type=tcp&flow=xtls-rprx-vision&pbk=xxxx&sid=&security=reality#外网信息复杂_理智分辨真假_www.domain.com_443
 vless://xxxx@x.x.x.x:443?encryption=none&headerType=none&sni=www.domain.com&fp=chrome&type=ws&alpn=h2,http/1.1&host=www.domain.com&path=/vless-ws&security=tls#外网信息复杂_理智分辨真假_x.x.x.x_443
 trojan://password@www.domain.com:443?encryption=none&headerType=none&sni=www.domain.com&fp=chrome&type=ws&alpn=h2,http/1.1&host=www.domain.com&path=/trojan-go-ws/&security=tls#外网信息复杂_理智分辨真假_www.domain.com_443`)},
