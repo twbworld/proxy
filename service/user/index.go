@@ -36,8 +36,7 @@ func (c *clash) Handle(user *db.Users) string {
 		return `proxies:
   - {name: "!!! 订阅已过期 !!!", type: trojan, server: cn.bing.com, port: 80, password: 0, network: tcp}
 proxy-groups:
-  - {name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["!!! 订阅已过期 !!!"]}
-  - {name: "🎯 全球直连", type: select, proxies: ["!!! 订阅已过期 !!!"]}`
+  - {name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["!!! 订阅已过期 !!!"]}`
 	}
 
 	if len(global.Config.Proxy) < 1 || !utils.FileExist(global.Config.ClashPath) {

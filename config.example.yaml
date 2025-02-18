@@ -16,6 +16,14 @@ gin_log_path: log/gin.log
 run_log_path: log/run.log
 # 时区
 tz: Asia/Shanghai
+# 客户端订阅配置
+subscribe:
+  # 文件命名,避免重复修改, clash客户端可能会存在多个订阅配置
+  filename: "config.yaml"
+  # 更新间隔(小时)
+  update_interval: 24
+  # 卡片链接
+  page_url: https://twbworld.github.io/proxy
 # 数据库配置
 database:
   #数据库类型(sqlite|mysql); 小应用sqlite, 大应用mysql

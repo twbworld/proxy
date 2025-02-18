@@ -123,6 +123,16 @@ func InSlice(slice []string, value string) int {
 	return -1
 }
 
+// 判断一个字符串是否包含多个子字符串中的任意一个
+func ContainsAny(str string, substrs []string) bool {
+	for _, substr := range substrs {
+		if strings.Contains(str, substr) {
+			return true
+		}
+	}
+	return false
+}
+
 // 取两个切片的交集
 func Union[T string | Number](slice1, slice2 []T) []T {
 	// 创建一个空的哈希集合用于存储第一个切片的元素
