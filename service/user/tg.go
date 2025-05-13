@@ -153,7 +153,7 @@ func (c *tgConfig) firstStep() error {
 
 		if errSys != nil {
 			goto SEND
-		} else if t, err := time.ParseInLocation(time.DateTime, info.UpdateTime, global.Tz); err != nil || time.Now().Unix()-t.Unix() > dao.SysTimeOut {
+		} else if t, err := time.ParseInLocation(time.DateTime, info.UpdateTime, time.UTC); err != nil || time.Now().Unix()-t.Unix() > dao.SysTimeOut {
 			if err != nil {
 				return errors.New("系统错误[adfaio]" + err.Error())
 			}
@@ -220,7 +220,7 @@ func (c *tgConfig) firstStep() error {
 				}
 				goto SEND
 			}
-			ExpiryDate := t.Format(time.DateOnly)
+			ExpiryDate := t.In(time.UTC).Format(time.DateOnly)
 			user.ExpiryDate = &ExpiryDate
 		default:
 			return errors.New("错误[kdfhf]: " + params[3])
@@ -456,7 +456,10 @@ func (c *tgConfig) getUserMarkdownV2Text(user *db.Users) string {
 	// }
 	// download := fmt.Sprintf("%.1f", float64(user.Download)/dao.App.UsersDb.QuotaMax)
 	// upload := fmt.Sprintf("%.1f", float64(user.Upload)/dao.App.UsersDb.QuotaMax)
-	// text := fmt.Sprintf("账号: `%s`\nid: %d\n限流: %s\n上行: %sG\n下行: %sG\n到期: %s", user.Username, user.Id, quota, upload, download, *user.ExpiryDate)
-	text := fmt.Sprintf("账号: `%s`\nid: %d\n到期: %s", user.Username, user.Id, *user.ExpiryDate)
+	ExpiryDateStr := *user.ExpiryDate
+	if t, err := time.Parse(time.DateOnly, *user.ExpiryDate); err != nil {
+		ExpiryDateStr = t.In(global.Tz).Format(time.DateOnly)
+	}
+	text := fmt.Sprintf("账号: `%s`\nid: %d\n到期: %s", user.Username, user.Id, ExpiryDateStr)
 	return strings.Replace(strings.Replace(text, `-`, `\-`, -1), `.`, `\.`, -1)
 }

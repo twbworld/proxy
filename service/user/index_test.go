@@ -23,7 +23,7 @@ func TestSetProtocol(t *testing.T) {
 
 func TestClashHandle(t *testing.T) {
 	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
-	ti := time.Now().In(global.Tz).AddDate(0, 1, 0).Format(time.DateOnly)
+	ti := time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly)
 
 	user := &db.Users{Quota: -1, ExpiryDate: &ti}
 	proxy := config.Proxy{Type: "vless", Server: "server1", Port: "443", Flow: "xtls-rprx-vision", RealityOpts: config.RealityOpts{PublicKey: "xxx"}}
@@ -42,7 +42,7 @@ func TestClashHandle(t *testing.T) {
 
 func TestXrayHandle(t *testing.T) {
 	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
-	ti := time.Now().In(global.Tz).AddDate(0, 1, 0).Format(time.DateOnly)
+	ti := time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly)
 
 	user := &db.Users{Quota: -1, ExpiryDate: &ti}
 	proxy := config.Proxy{Type: "vless", Server: "server1", Port: "443", Uuid: "xxx", Network: "ws", WsOpts: config.WsOpts{Path: "xx"}}
@@ -70,7 +70,7 @@ func TestXrayGetConfig(t *testing.T) {
 
 func TestCheckUser(t *testing.T) {
 	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
-	ti := time.Now().In(global.Tz)
+	ti := time.Now().In(time.UTC)
 	t1 := ti.Format(time.DateOnly)
 	t2 := ti.AddDate(0, -1, 0).Format(time.DateOnly)
 

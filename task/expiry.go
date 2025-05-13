@@ -24,20 +24,20 @@ func Expiry() error {
 		return nil
 	}
 
-	now := time.Now().In(global.Tz)
-	t, err := time.ParseInLocation(time.DateTime, now.Format(time.DateOnly+" 00:00:01"), global.Tz)
+	now := time.Now().In(time.UTC)
+	t, err := time.ParseInLocation(time.DateTime, now.Format(time.DateOnly+" 00:00:01"), time.UTC)
 	if err != nil {
 		global.Log.Errorf("时间出错[djaksofja]: %v", err)
 		return err
 	}
-	t1, t2 := now.AddDate(0, 0, -7), time.Now().In(global.Tz).AddDate(0, 0, -5)
+	t1, t2 := now.AddDate(0, 0, -7), time.Now().In(time.UTC).AddDate(0, 0, -5)
 
 	ids := make([]uint, 0, len(users))
 	for _, user := range users {
 		if user.ExpiryDate == nil || *user.ExpiryDate == "" || user.Id < 1 {
 			continue
 		}
-		ti, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, global.Tz)
+		ti, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, time.UTC)
 		if err != nil {
 			continue
 		}

@@ -7,7 +7,6 @@ import (
 
 	"sync"
 
-	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model/db"
 
 	tool "github.com/twbworld/proxy/utils"
@@ -162,7 +161,7 @@ func (u *UsersDb) InsertEmptyUsers(userName string, tx *sqlx.Tx) (err error) {
 		"password":     tool.Hash(userName),
 		"passwordShow": tool.Base64Encode(tool.Hash(userName)),
 		"quota":        int(50 * QuotaMax),
-		"expiryDate":   time.Now().In(global.Tz).AddDate(0, 1, 0).Format(time.DateOnly),
+		"expiryDate":   time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly),
 		"useDays":      30,
 		"download":     0,
 		"upload":       0,

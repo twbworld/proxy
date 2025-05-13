@@ -204,7 +204,7 @@ func checkUser(user *db.Users) bool {
 		return true
 	}
 
-	t, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, global.Tz)
+	t, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, time.UTC)
 
-	return err != nil || t.AddDate(0, 0, 1).After(time.Now().In(global.Tz))
+	return err != nil || t.AddDate(0, 0, 1).After(time.Now().In(time.UTC))
 }

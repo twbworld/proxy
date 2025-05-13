@@ -45,7 +45,7 @@ func (b *BaseApi) Subscribe(ctx *gin.Context) {
 			ctx.Header("profile-web-page-url", global.Config.Subscribe.PageUrl)
 		}
 		if *user.ExpiryDate != "" {
-			t, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, global.Tz)
+			t, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, time.UTC)
 			if err == nil {
 				//暂不支持流量获取
 				ctx.Header("subscription-userinfo", fmt.Sprintf("upload=0; download=0; total=0; expire=%d", t.Unix()))
