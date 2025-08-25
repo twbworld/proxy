@@ -1,6 +1,8 @@
 port: 7890
 socks-port: 7891
 allow-lan: true
+dns:
+  enable: true
 mode: rule
 log-level: info
 external-controller: :9090
