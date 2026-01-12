@@ -1,5 +1,5 @@
 ##编译
-FROM golang:1.24 AS builder
+FROM golang:1.25 AS builder
 WORKDIR /app
 ARG TARGETARCH
 ENV GO111MODULE=on
