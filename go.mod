@@ -1,6 +1,6 @@
 module github.com/twbworld/proxy
 
-go 1.24.4
+go 1.25
 
 require (
 	github.com/fsnotify/fsnotify v1.8.0

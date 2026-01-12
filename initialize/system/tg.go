@@ -42,7 +42,7 @@ func tgStart() error {
 		return fmt.Errorf("获取webhook失败: %w", err)
 	}
 	if info.LastErrorDate != 0 {
-		return fmt.Errorf("获取tg信息错误[9e0rtji]: %s", info.LastErrorMessage)
+		global.Log.Warnf("获取tg信息错误(可忽略)[9e0rtji]: %s", info.LastErrorMessage)
 	}
 
 	global.Log.Printf("成功配置tg[doiasjo]: %s", global.Bot.Self.UserName)
