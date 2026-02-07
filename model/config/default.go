@@ -15,5 +15,5 @@ type Config struct {
 	Database    Database  `json:"database" mapstructure:"database" yaml:"database"`
 	Telegram    Telegram  `json:"telegram" mapstructure:"telegram" yaml:"telegram"`
 	Cors        []string  `json:"cors" mapstructure:"cors" yaml:"cors"`
-	Proxy       []Proxy   `json:"proxy" mapstructure:"proxy" yaml:"proxy"`
+	Proxies     []Proxies `json:"proxies" mapstructure:"proxies" yaml:"proxies"`
 }

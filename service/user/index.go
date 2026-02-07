@@ -2,6 +2,7 @@ package user
 
 import (
 	"encoding/json"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -15,7 +16,7 @@ import (
 
 type BaseService struct{}
 
-type xray struct{}
+type v2ray struct{}
 type clash struct{}
 type class interface {
 	Handle(user *db.Users) string
@@ -26,12 +27,12 @@ func (b *BaseService) SetProtocol(t string) class {
 	case "clash":
 		return &clash{}
 	default:
-		return &xray{}
+		return &v2ray{}
 	}
 }
 
+// Handle 处理 Clash/Mihomo 订阅
 func (c *clash) Handle(user *db.Users) string {
-
 	if !checkUser(user) {
 		return `proxies:
   - {name: "!!! 订阅已过期 !!!", type: trojan, server: cn.bing.com, port: 80, password: 0, network: tcp}
@@ -39,31 +40,31 @@ proxy-groups:
   - {name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["!!! 订阅已过期 !!!"]}`
 	}
 
-	if len(global.Config.Proxy) < 1 || !utils.FileExist(global.Config.ClashPath) {
+	if len(global.Config.Proxies) < 1 || !utils.FileExist(global.Config.ClashPath) {
 		return ""
 	}
 
-	proxiesName := make([]string, 0, len(global.Config.Proxy))
-	var proxies strings.Builder
+	proxiesName := make([]string, 0, len(global.Config.Proxies))
+	var proxiesBuilder strings.Builder
 
-	for _, value := range global.Config.Proxy {
+	for _, value := range global.Config.Proxies {
 		if value.Server == "" || value.Type == "" || (value.Root && user.Quota != -1) {
 			continue
 		}
 
-		combinationType := c.getConfig(&value)
-		if combinationType == nil {
+		proxyConfig, name := c.getConfig(&value)
+		if name == "" || proxyConfig == nil {
 			continue
 		}
 
-		b, e := json.Marshal(combinationType)
-		if e != nil || b == nil {
+		b, err := json.Marshal(proxyConfig)
+		if err != nil || len(b) == 0 {
 			continue
 		}
 
-		proxies.WriteString("\n  - ") //yaml格式
-		proxies.Write(b)
-		proxiesName = append(proxiesName, value.Name)
+		proxiesBuilder.WriteString("\n  - ")
+		proxiesBuilder.Write(b)
+		proxiesName = append(proxiesName, name)
 	}
 
 	if len(proxiesName) < 1 {
@@ -75,26 +76,31 @@ proxy-groups:
 		return ""
 	}
 
-	fres, err := os.ReadFile(global.Config.ClashPath)
-	if err != nil || len(fres) < 1 {
+	tpl, err := os.ReadFile(global.Config.ClashPath)
+	if err != nil || len(tpl) < 1 {
 		return ""
 	}
 
-	replacer := strings.NewReplacer(` [proxies]`, proxies.String(), `[proxies_name]`, string(bn))
+	replacer := strings.NewReplacer(
+		`[proxies]`, proxiesBuilder.String(),
+		`[proxies_name]`, string(bn),
+	)
 
-	return replacer.Replace(string(fres))
+	return replacer.Replace(string(tpl))
 }
 
-func (x *xray) Handle(user *db.Users) string {
+// Handle 处理 v2rayN 订阅
+func (x *v2ray) Handle(user *db.Users) string {
 	if !checkUser(user) {
 		return utils.Base64Encode("vless://0@cn.bing.com:80?type=tcp#!!! 订阅已过期 !!!")
 	}
 
-	if len(global.Config.Proxy) < 1 {
+	if len(global.Config.Proxies) < 1 {
 		return ""
 	}
+
 	var subscription strings.Builder
-	for _, value := range global.Config.Proxy {
+	for _, value := range global.Config.Proxies {
 		if value.Server == "" || value.Type == "" || (value.Root && user.Quota != -1) {
 			continue
 		}
@@ -107,93 +113,132 @@ func (x *xray) Handle(user *db.Users) string {
 	return utils.Base64Encode(subscription.String())
 }
 
-func (c *clash) getConfig(value *config.Proxy) any {
-	value.SetProxyDefault()
+// getConfig 生成 Clash 配置对象
+func (c *clash) getConfig(value *config.Proxies) (any, string) {
+	p := *value
+	p.SetProxyDefault()
 
+	// 忽略不支持的 xhttp 类型
+	if p.Type != "vless" || p.Network == "xhttp" {
+		return nil, ""
+	}
+
+	// 根据 Network 和 Flow 判断具体类型
 	switch {
-	case value.Type == "vless" && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "":
-		// VLESS-WS-TLS
-		return common.ClashVlessWs{Proxy: value}
-	case value.Type == "vless" && value.Flow == "xtls-rprx-vision" && value.RealityOpts.PublicKey != "":
-		// VLESS-TCP-XTLS-Vision-REALITY
-		return common.ClashVlessVisionReality{Proxy: value}
-	case value.Type == "vless" && value.Flow == "xtls-rprx-vision":
-		// VLESS-TCP-XTLS-Vision
-		return common.ClashVlessVision{Proxy: value}
-	case value.Type == "trojan" && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "":
-		// TROJAN-WS-TLS
-		trojan := common.ClashTrojanWs{Proxy: value}
-		trojan.Password = value.Uuid
-		return trojan
-	case value.Type == "trojan":
-		// TROJAN-TCP-TLS
-		trojan := common.ClashTrojan{Proxy: value}
-		trojan.Password = value.Uuid
-		return trojan
+	case p.Flow == "xtls-rprx-vision" && p.RealityOpts.PublicKey != "":
+		// VLESS Reality (TCP)
+		return common.ClashVlessReality{Proxies: &p}, p.Name
+	case p.Network == "grpc":
+		// VLESS gRPC
+		return common.ClashVlessGrpc{Proxies: &p}, p.Name
+	case p.Network == "tcp":
+		// VLESS TCP (TLS/Vision)
+		return common.ClashVlessBase{Proxies: &p}, p.Name
 	default:
-		return nil
+		return nil, ""
 	}
 }
 
-func (x *xray) getConfig(value *config.Proxy) string {
-	value.SetProxyDefault()
+// getConfig 生成 v2rayN 链接
+func (x *v2ray) getConfig(value *config.Proxies) string {
+	p := *value
+	p.SetProxyDefault()
 
-	if value.Type == "" || value.Server == "" || value.Port == "" {
+	if p.Type == "" || p.Server == "" || p.Port == "" {
 		return ""
 	}
 
 	var link strings.Builder
-	link.WriteString(value.Type)
-	if value.Type == "vless" || value.Type == "trojan" {
-		link.WriteString("://")
-		link.WriteString(value.Uuid)
-	}
-
+	link.WriteString(p.Type)
+	link.WriteString("://")
+	link.WriteString(p.Uuid)
 	link.WriteString("@")
-	link.WriteString(value.Server)
+	link.WriteString(p.Server)
 	link.WriteString(":")
-	link.WriteString(value.Port)
-	link.WriteString("?encryption=none&headerType=none&sni=")
-	link.WriteString(value.Sni)
-	link.WriteString("&fp=")
-	link.WriteString(value.ClientFingerprint)
-	link.WriteString("&type=")
-	link.WriteString(value.Network)
+	link.WriteString(p.Port)
 
-	switch {
-	case (value.Type == "vless" || value.Type == "trojan") && value.Network == "ws" && value.WsOpts.Path != "" && value.Flow == "":
-		// VLESS-WS-TLS || TROJAN-WS-TLS
-		link.WriteString("&alpn=")
-		link.WriteString(strings.Join(value.Alpn, ","))
-		link.WriteString("&host=")
-		link.WriteString(value.WsOpts.Headers.Host)
-		link.WriteString("&path=")
-		link.WriteString(value.WsOpts.Path)
-		link.WriteString("&security=tls")
-	case value.Type == "vless" && value.Flow == "xtls-rprx-vision" && value.RealityOpts.PublicKey != "":
-		// VLESS-TCP-XTLS-Vision-REALITY
-		link.WriteString("&flow=")
-		link.WriteString(value.Flow)
-		link.WriteString("&pbk=")
-		link.WriteString(value.RealityOpts.PublicKey)
-		link.WriteString("&sid=")
-		link.WriteString(value.RealityOpts.ShortId)
+	// 公共参数
+	link.WriteString("?encryption=none")
+
+	// Security
+	if p.RealityOpts.PublicKey != "" {
 		link.WriteString("&security=reality")
-	case value.Type == "vless" && value.Flow == "xtls-rprx-vision":
-		// VLESS-TCP-XTLS-Vision
-		link.WriteString("&alpn=")
-		link.WriteString(strings.Join(value.Alpn, ","))
-		link.WriteString("&flow=")
-		link.WriteString(value.Flow)
-		link.WriteString("&security=tls")
-	case value.Type == "trojan":
-		// TROJAN-TCP-TLS
-		link.WriteString("&alpn=")
-		link.WriteString(strings.Join(value.Alpn, ","))
+	} else if p.Tls {
 		link.WriteString("&security=tls")
 	}
+
+	// Servername / SNI
+	if p.Servername != "" {
+		link.WriteString("&sni=")
+		link.WriteString(p.Servername)
+	}
+
+	// Fingerprint
+	if p.ClientFingerprint != "" {
+		link.WriteString("&fp=")
+		link.WriteString(p.ClientFingerprint)
+	}
+
+	// Flow (Vision)
+	if p.Flow != "" {
+		link.WriteString("&flow=")
+		link.WriteString(p.Flow)
+	}
+
+	// Network Type (只有 tcp, grpc, xhttp)
+	if p.Network != "" {
+		link.WriteString("&type=")
+		link.WriteString(p.Network)
+	}
+
+	// ALPN
+	if len(p.Alpn) > 0 {
+		link.WriteString("&alpn=")
+		link.WriteString(url.QueryEscape(strings.Join(p.Alpn, ",")))
+	}
+
+	// 协议特定参数
+	switch p.Network {
+	case "tcp":
+		link.WriteString("&headerType=none")
+		if p.RealityOpts.PublicKey != "" {
+			link.WriteString("&pbk=")
+			link.WriteString(p.RealityOpts.PublicKey)
+			link.WriteString("&sid=")
+			link.WriteString(p.RealityOpts.ShortId)
+		}
+	case "grpc":
+		if p.GrpcOpts.GrpcServiceName != "" {
+			link.WriteString("&serviceName=")
+			link.WriteString(p.GrpcOpts.GrpcServiceName)
+		}
+		link.WriteString("&mode=gun")
+		// gRPC 通常需要 authority
+		if p.Servername != "" {
+			link.WriteString("&authority=")
+			link.WriteString(p.Servername)
+		}
+	case "xhttp":
+		if p.XhttpOpts.Path != "" {
+			link.WriteString("&path=")
+			link.WriteString(p.XhttpOpts.Path)
+		}
+		if p.XhttpOpts.Mode != "" {
+			link.WriteString("&mode=")
+			link.WriteString(p.XhttpOpts.Mode)
+		}
+		// 处理 extra 参数
+		if len(p.XhttpOpts.Extra) > 0 {
+			extraBytes, err := json.Marshal(p.XhttpOpts.Extra)
+			if err == nil {
+				link.WriteString("&extra=")
+				link.WriteString(url.QueryEscape(string(extraBytes)))
+			}
+		}
+	}
+
 	link.WriteString("#")
-	link.WriteString(value.Name)
+	link.WriteString(p.Name)
 
 	return link.String()
 }

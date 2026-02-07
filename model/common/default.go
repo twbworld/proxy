@@ -4,30 +4,23 @@ import (
 	"github.com/twbworld/proxy/model/config"
 )
 
-type ClashVlessVisionReality struct {
-	*config.Proxy
-	WsOpts         int `json:"-"`
-	Alpn           int `json:"-"`
-	SkipCertVerify int `json:"-"`
+type ClashVlessBase struct {
+	*config.Proxies
+	RealityOpts bool `json:"reality-opts,omitempty"`
+	GrpcOpts    bool `json:"grpc-opts,omitempty"`
+	XhttpOpts   bool `json:"xhttp-opts,omitempty"`
 }
-type ClashVlessVision struct {
-	*config.Proxy
-	WsOpts      int `json:"-"`
-	RealityOpts int `json:"-"`
+
+// 针对 TCP (Reality) 的结构
+type ClashVlessReality struct {
+	*config.Proxies
+	GrpcOpts  bool `json:"grpc-opts,omitempty"`
+	XhttpOpts bool `json:"xhttp-opts,omitempty"`
 }
-type ClashVlessWs struct {
-	*config.Proxy
-	RealityOpts int `json:"-"`
-}
-type ClashTrojanWs struct {
-	*config.Proxy
-	RealityOpts int    `json:"-"`
-	Password    string `json:"password"`
-}
-type ClashTrojan struct {
-	*config.Proxy
-	RealityOpts int    `json:"-"`
-	WsOpts      int    `json:"-"`
-	Uuid        string `json:"-" info:"用户ID或trojan的password"`
-	Password    string `json:"password"`
+
+// 针对 gRPC 的结构
+type ClashVlessGrpc struct {
+	*config.Proxies
+	RealityOpts bool `json:"reality-opts,omitempty"`
+	XhttpOpts   bool `json:"xhttp-opts,omitempty"`
 }

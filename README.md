@@ -126,5 +126,5 @@ $ ./server -a expiry
 * `v2ray`订阅地址例子: `www.domain.com/username.html`
   > 其中`www.domain.com`是自己的域名,指向该项目监听的端口; `username`是用户名, 如果数据库中存在该用户, 则显示在`config.yaml`下`proxy`选项所配置的vpn信息
 * `clash`订阅地址例子: `clash.domain.com/username.html`
-    > `clash`与前两者不同, 其识别的是配置文件, 所以clash需不同的网址, 且以clash开头的域名, 请自行解析域名;[相关代码](https://github.com/twbworld/proxy/blob/main/controller/user/base.go)
+    > `clash`与前者不同,其响应的是yaml格式配置,域名以clash开头;[相关代码](https://github.com/twbworld/proxy/blob/main/controller/user/base.go)
 > 提示: 这个客户端使用的`订阅域名`, 跟`连接xray等服务端的域名`是不一样哦; 可以理解为: 利用`订阅域名`获取连接信息, 这些连接信息就包含了用于连接xray服务的域名;

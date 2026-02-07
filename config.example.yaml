@@ -49,35 +49,84 @@ telegram:
 # 允许跨域的域名
 cors:
   - "*"
-proxy:
-  # VLESS-TCP-XTLS-Vision-REALITY
-  - type: vless
-    server: www.domain.com
-    port: 443
-    uuid: xxxx
-    flow: xtls-rprx-vision
-    network: tcp
-    reality-opts:
-      public-key: xxxx
-      short-id: ""
-    root: true
-  # VLESS-WS-TLS
-  - type: vless
+proxies:
+  # vless-tcp-vision-reality
+  - name: "外网信息复杂_理智分辨真假_reality"
+    type: vless
     server: x.x.x.x
     port: 443
-    uuid: xxxx
-    network: ws
-    ws-opts:
-      path: /vless-ws
-      headers:
-        host: www.domain.com
-  # TROJAN-WS-TLS
-  - type: trojan
-    server: www.domain.com
+    uuid: x-x-x-x-x
+    tls: true
+    udp: true
+    flow: xtls-rprx-vision
+    servername: www.tesla.com
+    network: tcp
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: xxx
+      short-id: ""
+  # vless-tcp-vision
+  - name: ""
+    type: vless
+    server: x.x.x.x
     port: 443
-    uuid: password
-    network: ws
-    ws-opts:
-      path: /trojan-go-ws/
-      headers:
-        host: www.domain.com
+    uuid: x-x-x-x-x
+    udp: true
+    tls: true
+    flow: xtls-rprx-vision
+    servername: x.x.x.x
+    network: tcp
+    client-fingerprint: chrome
+    skip-cert-verify: false
+    alpn:
+      - h2
+      - http/1.1
+    root: true
+  # cdn上行vless-xhttp,下行reality
+  - name: ""
+    type: vless
+    server: x.x.x.x
+    port: 443
+    uuid: x-x-x-x-x
+    network: xhttp
+    tls: true
+    udp: true
+    servername: x.x.x.x
+    client-fingerprint: chrome
+    alpn:
+      - h2
+    skip-cert-verify: false
+    xhttp-opts:
+      mode: auto
+      path: "/xxx"
+      extra:
+        downloadSettings:
+          address: 1.1.1.1
+          port: 443
+          network: xhttp
+          security: reality
+          realitySettings:
+            serverName: www.tesla.com
+            fingerprint: chrome
+            show: false
+            publicKey: xxx
+            shortId: ""
+          xhttpSettings:
+            path: "/xxx"
+            mode: auto
+  # cdn:VLESS-grpc
+  - name: ""
+    type: vless
+    server: x.x.x.x
+    port: 443
+    uuid: x-x-x-x-x
+    udp: true
+    tls: true
+    servername: x.x.x.x
+    network: grpc
+    grpc-opts:
+      grpc-service-name: xxx
+    client-fingerprint: chrome
+    alpn:
+      - h2
+    skip-cert-verify: false

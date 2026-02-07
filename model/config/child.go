@@ -6,14 +6,15 @@ type RealityOpts struct {
 	PublicKey string `json:"public-key" mapstructure:"public-key" yaml:"public-key"`
 	ShortId   string `json:"short-id" mapstructure:"short-id" yaml:"short-id"`
 }
-type WsOpts struct {
-	Path    string  `json:"path" mapstructure:"path" yaml:"path"`
-	Headers Headers `json:"headers" mapstructure:"headers" yaml:"headers"`
+type GrpcOpts struct {
+	GrpcServiceName string `json:"grpc-service-name" mapstructure:"grpc-service-name" yaml:"grpc-service-name"`
 }
-type Headers struct {
-	Host string `json:"host" mapstructure:"host" yaml:"host"`
+type XhttpOpts struct {
+	Mode  string                 `json:"mode" mapstructure:"mode" yaml:"mode"`
+	Path  string                 `json:"path" mapstructure:"path" yaml:"path"`
+	Extra map[string]interface{} `json:"extra" mapstructure:"extra" yaml:"extra"`
 }
-type Proxy struct {
+type Proxies struct {
 	Name              string      `json:"name" mapstructure:"name" yaml:"name"`
 	Type              string      `json:"type" mapstructure:"type" yaml:"type"`
 	Server            string      `json:"server" mapstructure:"server" yaml:"server"`
@@ -23,12 +24,13 @@ type Proxy struct {
 	SkipCertVerify    bool        `json:"skip-cert-verify" mapstructure:"skip-cert-verify" yaml:"skip-cert-verify"`
 	ClientFingerprint string      `json:"client-fingerprint" mapstructure:"client-fingerprint" yaml:"client-fingerprint"`
 	Alpn              []string    `json:"alpn" mapstructure:"alpn" yaml:"alpn"`
-	Sni               string      `json:"sni" mapstructure:"sni" yaml:"sni"`
+	Servername        string      `json:"servername" mapstructure:"servername" yaml:"servername"`
 	Uuid              string      `json:"uuid" mapstructure:"uuid" yaml:"uuid"`
 	Flow              string      `json:"flow" mapstructure:"flow" yaml:"flow"`
 	Network           string      `json:"network" mapstructure:"network" yaml:"network"`
 	RealityOpts       RealityOpts `json:"reality-opts" mapstructure:"reality-opts" yaml:"reality-opts"`
-	WsOpts            WsOpts      `json:"ws-opts" mapstructure:"ws-opts" yaml:"ws-opts"`
+	GrpcOpts          GrpcOpts    `json:"grpc-opts" mapstructure:"grpc-opts" yaml:"grpc-opts"`
+	XhttpOpts         XhttpOpts   `json:"xhttp-opts" mapstructure:"xhttp-opts" yaml:"xhttp-opts"`
 	Root              bool        `json:"root,omitempty" mapstructure:"root" yaml:"root"`
 }
 
@@ -53,17 +55,12 @@ type Telegram struct {
 	Id    int64  `json:"id" mapstructure:"id" yaml:"id"`
 }
 
-func (p *Proxy) SetProxyDefault() {
-	domain := p.WsOpts.Headers.Host
-	if domain == "" {
-		//套cdn(如使用优选ip),则host/sni不等于server
-		//PS: 这可判断Server是否为域名
-		domain = p.Server
-		p.WsOpts.Headers.Host = domain
+func (p *Proxies) SetProxyDefault() {
+	// 如果 Servername 仍为空，且 Server 看起来像域名（简单判断），则兜底
+	if p.Servername == "" && p.Server != "" {
+		p.Servername = p.Server
 	}
-	if p.Sni == "" && domain != "" {
-		p.Sni = domain
-	}
+
 	if p.Name == "" {
 		p.Name = fmt.Sprintf("外网信息复杂_理智分辨真假_%s_%s", p.Server, p.Port)
 	}
@@ -71,9 +68,11 @@ func (p *Proxy) SetProxyDefault() {
 		p.ClientFingerprint = "chrome"
 	}
 	if len(p.Alpn) == 0 {
+		// 默认 ALPN，针对不同协议可能需要调整，这里保持默认
 		p.Alpn = []string{"h2", "http/1.1"}
 	}
+
+	// 强制开启 TLS/UDP
 	p.Tls = true
 	p.Udp = true
-	// p.SkipCertVerify = false
 }
