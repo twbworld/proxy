@@ -7,10 +7,10 @@ import (
 )
 
 type Response struct {
-	Code  int8        `json:"code"`
-	Data  interface{} `json:"data"`
-	Msg   string      `json:"msg"`
-	Token string      `json:"token,omitempty"`
+	Code  int8   `json:"code"`
+	Data  any    `json:"data"`
+	Msg   string `json:"msg"`
+	Token string `json:"token,omitempty"`
 }
 
 const (
@@ -20,7 +20,7 @@ const (
 	defaultFailMsg    = `错误`
 )
 
-func result(ctx *gin.Context, code int8, msg string, data interface{}) {
+func result(ctx *gin.Context, code int8, msg string, data any) {
 	ctx.JSON(http.StatusOK, Response{
 		Code: code,
 		Data: data,
@@ -29,17 +29,17 @@ func result(ctx *gin.Context, code int8, msg string, data interface{}) {
 }
 
 // 带data
-func Success(ctx *gin.Context, data interface{}) {
+func Success(ctx *gin.Context, data any) {
 	result(ctx, successCode, defaultSuccessMsg, data)
 }
 
 // 带msg,不带data
 func SuccessOk(ctx *gin.Context, message string) {
-	result(ctx, successCode, message, map[string]interface{}{})
+	result(ctx, successCode, message, map[string]any{})
 }
 
 func Fail(ctx *gin.Context, message string) {
-	result(ctx, errorCode, message, map[string]interface{}{})
+	result(ctx, errorCode, message, map[string]any{})
 }
 
 func FailNotFound(ctx *gin.Context) {

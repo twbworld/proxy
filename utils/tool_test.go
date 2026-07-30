@@ -72,7 +72,7 @@ func TestListToMap(t *testing.T) {
 		{Key: "b", Value: "2"},
 	}
 	result := ListToMap(list, "Key")
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"a": Item{Key: "a", Value: "1"},
 		"b": Item{Key: "b", Value: "2"},
 	}

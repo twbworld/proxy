@@ -47,7 +47,7 @@ func (s *SystemInfoDb) SaveSysVal(key, value string, tx *sqlx.Tx) (err error) {
 func (s *SystemInfoDb) CheckSysVal(key string, tx *sqlx.Tx) (err error) {
 	var info db.SystemInfo
 	if s.GetSysValByKey(&info, key, tx) == sql.ErrNoRows {
-		sql, args := utils.getInsertSql(db.SystemInfo{}, map[string]interface{}{
+		sql, args := utils.getInsertSql(db.SystemInfo{}, map[string]any{
 			"key": key,
 		})
 		_, err = tx.Exec(sql, args...)

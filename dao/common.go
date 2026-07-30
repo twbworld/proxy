@@ -8,16 +8,16 @@ import (
 
 type dbUtils struct{}
 
-func (u *dbUtils) getInsertSql(d db.Dbfunc, data map[string]interface{}) (string, []interface{}) {
+func (u *dbUtils) getInsertSql(d db.Dbfunc, data map[string]any) (string, []any) {
 	if len(data) < 1 {
-		return ``, []interface{}{}
+		return ``, []any{}
 	}
 
 	var (
 		fields strings.Builder
 		values strings.Builder
 		sql    strings.Builder
-		args   []interface{} = make([]interface{}, 0, len(data))
+		args   []any = make([]any, 0, len(data))
 	)
 
 	//注意map是无序的
@@ -40,15 +40,15 @@ func (u *dbUtils) getInsertSql(d db.Dbfunc, data map[string]interface{}) (string
 	return sql.String(), args
 }
 
-func (u *dbUtils) getUpdateSql(d db.Dbfunc, id uint, data map[string]interface{}) (string, []interface{}) {
+func (u *dbUtils) getUpdateSql(d db.Dbfunc, id uint, data map[string]any) (string, []any) {
 	if len(data) < 1 {
-		return ``, []interface{}{}
+		return ``, []any{}
 	}
 
 	var (
 		fields strings.Builder
 		sql    strings.Builder
-		args   []interface{} = make([]interface{}, 0, len(data))
+		args   []any = make([]any, 0, len(data))
 	)
 
 	for k, v := range data {

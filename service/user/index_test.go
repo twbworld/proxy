@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/twbworld/proxy/global"
-	"github.com/twbworld/proxy/model/common"
 	"github.com/twbworld/proxy/model/config"
 	"github.com/twbworld/proxy/model/db"
 	"github.com/twbworld/proxy/utils"
@@ -25,9 +24,11 @@ func TestSetProtocol(t *testing.T) {
 
 func TestClashHandle(t *testing.T) {
 	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
-	ti := time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly)
 
-	user := &db.Users{Quota: -1, ExpiryDate: &ti}
+	user := &db.Users{
+		Quota:      -1,
+		ExpiryDate: new(time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly)),
+	}
 
 	proxy := config.Proxies{
 		Name:        "test_node",
@@ -100,10 +101,13 @@ func TestClashGetConfig(t *testing.T) {
 		Network:     "tcp",
 		Flow:        "xtls-rprx-vision",
 		RealityOpts: config.RealityOpts{PublicKey: "pk"},
+		GrpcOpts:    config.GrpcOpts{GrpcServiceName: "dirty-data"}, // 测试脏数据是否被成功抹除
 	}
 	resReality, nameReality := c.getConfig(&proxyReality)
 	assert.Equal(t, "RealityNode", nameReality)
-	assert.IsType(t, common.ClashVlessReality{}, resReality)
+	assert.IsType(t, &config.Proxies{}, resReality)
+	// 断言：无关数据已被置为零值，以确保 omitzero 能生效
+	assert.Empty(t, resReality.(*config.Proxies).GrpcOpts.GrpcServiceName)
 
 	// Case 2: VLESS gRPC
 	proxyGrpc := config.Proxies{
@@ -113,7 +117,7 @@ func TestClashGetConfig(t *testing.T) {
 	}
 	resGrpc, nameGrpc := c.getConfig(&proxyGrpc)
 	assert.Equal(t, "GrpcNode", nameGrpc)
-	assert.IsType(t, common.ClashVlessGrpc{}, resGrpc)
+	assert.IsType(t, &config.Proxies{}, resGrpc)
 
 	// Case 3: VLESS TCP (Base)
 	proxyTcp := config.Proxies{
@@ -123,7 +127,7 @@ func TestClashGetConfig(t *testing.T) {
 	}
 	resTcp, nameTcp := c.getConfig(&proxyTcp)
 	assert.Equal(t, "TcpNode", nameTcp)
-	assert.IsType(t, common.ClashVlessBase{}, resTcp)
+	assert.IsType(t, &config.Proxies{}, resTcp)
 
 	// Case 4: XHTTP (Clash Meta 支持)
 	proxyXhttp := config.Proxies{
@@ -140,7 +144,7 @@ func TestClashGetConfig(t *testing.T) {
 	}
 	resXhttp, nameXhttp := c.getConfig(&proxyXhttp)
 	assert.Equal(t, "XhttpNode", nameXhttp)
-	assert.IsType(t, common.ClashVlessXhttp{}, resXhttp)
+	assert.IsType(t, &config.Proxies{}, resXhttp)
 }
 
 func TestV2rayGetConfig(t *testing.T) {
@@ -162,8 +166,8 @@ func TestV2rayGetConfig(t *testing.T) {
 	assert.Contains(t, result, "#test")
 
 	// Case 2: XHTTP with Extra and DownloadSettings params
-	extraData := map[string]interface{}{
-		"xhttpSettings": map[string]interface{}{"path": "/v7"},
+	extraData := map[string]any{
+		"xhttpSettings": map[string]any{"path": "/v7"},
 	}
 	proxyXhttp := config.Proxies{
 		Type:    "vless",
@@ -187,9 +191,9 @@ func TestV2rayGetConfig(t *testing.T) {
 	assert.Contains(t, resultXhttp, "mode=auto")
 	assert.Contains(t, resultXhttp, "path=%2Fpath")
 
-	expectedExtraData := map[string]interface{}{
-		"xhttpSettings": map[string]interface{}{"path": "/v7"},
-		"downloadSettings": map[string]interface{}{
+	expectedExtraData := map[string]any{
+		"xhttpSettings": map[string]any{"path": "/v7"},
+		"downloadSettings": map[string]any{
 			"address": "1.1.1.1",
 			"port":    443,
 		},
@@ -211,11 +215,9 @@ func TestCheckUser(t *testing.T) {
 	user.ExpiryDate = &t2
 	assert.False(t, checkUser(user))
 
-	empty := ""
-	user.ExpiryDate = &empty
+	user.ExpiryDate = new("")
 	assert.True(t, checkUser(user))
 
-	zero := "0"
-	user.ExpiryDate = &zero
+	user.ExpiryDate = new("0")
 	assert.True(t, checkUser(user))
 }

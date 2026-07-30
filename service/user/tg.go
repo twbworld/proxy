@@ -220,8 +220,7 @@ func (c *tgConfig) firstStep() error {
 				}
 				goto SEND
 			}
-			ExpiryDate := t.In(time.UTC).Format(time.DateOnly)
-			user.ExpiryDate = &ExpiryDate
+			user.ExpiryDate = new(t.In(time.UTC).Format(time.DateOnly))
 		default:
 			return errors.New("错误[kdfhf]: " + params[3])
 		}
@@ -328,21 +327,19 @@ func (c *tgConfig) actionType(act string, userId uint) error {
 
 	switch act {
 	case "user_select":
-		ikb := tg.NewInlineKeyboardMarkup(
+		msg.ReplyMarkup = new(tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
 				tg.NewInlineKeyboardButtonData("修改此用户["+user.Username+"]", fmt.Sprintf("user_update@%d", user.Id)),
 			),
-		)
-		msg.ReplyMarkup = &ikb
+		))
 		goto SEND3
 	case "user_update":
-		ikb := tg.NewInlineKeyboardMarkup(
+		msg.ReplyMarkup = new(tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
 				// tg.NewInlineKeyboardButtonData("限流", fmt.Sprintf("user_update@%d@%s", user.Id, "quota")),
 				tg.NewInlineKeyboardButtonData("到期", fmt.Sprintf("user_update@%d@%s", user.Id, "expiryDate")),
 			),
-		)
-		msg.ReplyMarkup = &ikb
+		))
 		msg.Text = fmt.Sprintf("选择修改\\[`%s`\\]的设置\n", user.Username) + msg.Text
 		goto SEND3
 	default:

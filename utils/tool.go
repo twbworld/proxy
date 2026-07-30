@@ -92,13 +92,13 @@ func CreateFile(path string) error {
 }
 
 // 类似php的array_column($a, null, 'key')
-func ListToMap(list interface{}, key string) map[string]interface{} {
+func ListToMap(list any, key string) map[string]any {
 	v := reflect.ValueOf(list)
 	if v.Kind() != reflect.Slice {
 		return nil
 	}
 
-	res := make(map[string]interface{}, v.Len())
+	res := make(map[string]any, v.Len())
 	for i := 0; i < v.Len(); i++ {
 		item := v.Index(i).Interface()
 		itemValue := reflect.ValueOf(item)

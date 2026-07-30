@@ -2,6 +2,7 @@ package user
 
 import (
 	"encoding/json"
+	"maps"
 	"net/url"
 	"os"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"github.com/twbworld/proxy/global"
-	"github.com/twbworld/proxy/model/common"
 	"github.com/twbworld/proxy/model/config"
 	"github.com/twbworld/proxy/model/db"
 	"github.com/twbworld/proxy/utils"
@@ -128,16 +128,25 @@ func (c *clash) getConfig(value *config.Proxies) (any, string) {
 	switch {
 	case p.Flow == "xtls-rprx-vision" && p.RealityOpts.PublicKey != "":
 		// VLESS Reality (TCP)
-		return common.ClashVlessReality{Proxies: &p}, p.Name
+		p.GrpcOpts = config.GrpcOpts{}
+		p.XhttpOpts = config.XhttpOpts{}
+		return &p, p.Name
 	case p.Network == "grpc":
 		// VLESS gRPC
-		return common.ClashVlessGrpc{Proxies: &p}, p.Name
+		p.RealityOpts = config.RealityOpts{}
+		p.XhttpOpts = config.XhttpOpts{}
+		return &p, p.Name
 	case p.Network == "xhttp":
 		// VLESS XHTTP
-		return common.ClashVlessXhttp{Proxies: &p}, p.Name
+		p.RealityOpts = config.RealityOpts{}
+		p.GrpcOpts = config.GrpcOpts{}
+		return &p, p.Name
 	case p.Network == "tcp":
 		// VLESS TCP (TLS/Vision)
-		return common.ClashVlessBase{Proxies: &p}, p.Name
+		p.RealityOpts = config.RealityOpts{}
+		p.GrpcOpts = config.GrpcOpts{}
+		p.XhttpOpts = config.XhttpOpts{}
+		return &p, p.Name
 	default:
 		return nil, ""
 	}
@@ -233,16 +242,14 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 		}
 
 		// 汇总整合 Extra 和 DownloadSettings 给 v2ray 使用 (映射为规范驼峰)
-		extraMap := make(map[string]interface{})
+		extraMap := make(map[string]any)
 		if len(p.XhttpOpts.Extra) > 0 {
-			for k, v := range p.XhttpOpts.Extra {
-				extraMap[k] = v
-			}
+			maps.Copy(extraMap, p.XhttpOpts.Extra)
 		}
 
 		if p.XhttpOpts.DownloadSettings != nil {
 			ds := p.XhttpOpts.DownloadSettings
-			v2rayDs := make(map[string]interface{})
+			v2rayDs := make(map[string]any)
 			if ds.Server != "" {
 				v2rayDs["address"] = ds.Server
 			}
@@ -266,7 +273,7 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 				v2rayDs["mode"] = ds.Mode
 			}
 			if ds.RealityOpts.PublicKey != "" {
-				v2rayDs["realitySettings"] = map[string]interface{}{
+				v2rayDs["realitySettings"] = map[string]any{
 					"publicKey": ds.RealityOpts.PublicKey,
 					"shortId":   ds.RealityOpts.ShortId,
 				}

@@ -74,7 +74,7 @@ func (u *UsersDb) UpdateUsers(user *db.Users, tx *sqlx.Tx) (err error) {
 		}
 	}
 
-	sql, args := utils.getUpdateSql(user, user.Id, map[string]interface{}{
+	sql, args := utils.getUpdateSql(user, user.Id, map[string]any{
 		"username":     user.Username,
 		"password":     user.Password,
 		"passwordShow": user.PasswordShow,
@@ -156,7 +156,7 @@ func (u *UsersDb) InsertEmptyUsers(userName string, tx *sqlx.Tx) (err error) {
 		return errors.New("请使用事务[iosdhja]")
 	}
 
-	sql, args := utils.getInsertSql(db.Users{}, map[string]interface{}{
+	sql, args := utils.getInsertSql(db.Users{}, map[string]any{
 		"username":     userName,
 		"password":     tool.Hash(userName),
 		"passwordShow": tool.Base64Encode(tool.Hash(userName)),

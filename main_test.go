@@ -50,9 +50,9 @@ func TestMain(t *testing.T) {
 	router.Start(ginServer)
 
 	// 构造 XHTTP extra 参数的预期编码字符串 (融合 downloadSettings)
-	extraData := map[string]interface{}{
+	extraData := map[string]any{
 		"a": "b",
-		"downloadSettings": map[string]interface{}{
+		"downloadSettings": map[string]any{
 			"address": "4.4.4.4",
 			"port":    443,
 		},
@@ -251,7 +251,7 @@ func injectTestProxies() {
 					Server: "4.4.4.4",
 					Port:   "443",
 				},
-				Extra: map[string]interface{}{
+				Extra: map[string]any{
 					"a":    "b",
 					"mode": "auto",
 				},
