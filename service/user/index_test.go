@@ -24,14 +24,11 @@ func TestSetProtocol(t *testing.T) {
 }
 
 func TestClashHandle(t *testing.T) {
-	// 设置时区，避免 checkUser 中的时间解析错误
 	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
-	// 设置一个未来的过期时间
 	ti := time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly)
 
 	user := &db.Users{Quota: -1, ExpiryDate: &ti}
 
-	// 构造一个 Reality 类型的配置
 	proxy := config.Proxies{
 		Name:        "test_node",
 		Type:        "vless",
@@ -44,7 +41,6 @@ func TestClashHandle(t *testing.T) {
 	global.Config.Proxies = []config.Proxies{proxy}
 	global.Config.ClashPath = "test_clash.yaml"
 
-	// 模拟 clash.yaml 模板，注意这里的占位符要和 index.go 中一致
 	err := os.WriteFile(global.Config.ClashPath, []byte(`proxies: [proxies]
 proxy-groups:
   - name: test
@@ -57,17 +53,11 @@ proxy-groups:
 	c := &clash{}
 	result := c.Handle(user)
 
-	// 验证结果包含节点名称列表 (JSON格式)
 	assert.Contains(t, result, `proxies: ["test_node"]`)
-
-	// 验证结果包含节点配置详情 (Clash Meta支持的JSON内嵌写法)
-	// 注意：index.go 中使用的是 json.Marshal，所以 key 会有引号
 	assert.Contains(t, result, fmt.Sprintf(`"server":"%s"`, proxy.Server))
 	assert.Contains(t, result, fmt.Sprintf(`"flow":"%s"`, proxy.Flow))
 	assert.Contains(t, result, fmt.Sprintf(`"public-key":"%s"`, proxy.RealityOpts.PublicKey))
 	assert.Contains(t, result, fmt.Sprintf(`"short-id":"%s"`, proxy.RealityOpts.ShortId))
-
-	// 验证 YAML 列表符号
 	assert.Contains(t, result, "\n  - {")
 }
 
@@ -76,7 +66,6 @@ func TestV2rayHandle(t *testing.T) {
 	ti := time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly)
 
 	user := &db.Users{Quota: -1, ExpiryDate: &ti}
-	// 构造一个 TCP 类型的配置
 	proxy := config.Proxies{
 		Type:       "vless",
 		Server:     "server1",
@@ -92,11 +81,8 @@ func TestV2rayHandle(t *testing.T) {
 	result := x.Handle(user)
 	decodedResult := utils.Base64Decode(result)
 
-	// 验证基础链接格式
 	expectedPrefix := fmt.Sprintf("%s://%s@%s:%s?", proxy.Type, proxy.Uuid, proxy.Server, proxy.Port)
 	assert.Contains(t, decodedResult, expectedPrefix)
-
-	// 验证参数
 	assert.Contains(t, decodedResult, "encryption=none")
 	assert.Contains(t, decodedResult, "security=tls")
 	assert.Contains(t, decodedResult, "sni=example.com")
@@ -139,15 +125,22 @@ func TestClashGetConfig(t *testing.T) {
 	assert.Equal(t, "TcpNode", nameTcp)
 	assert.IsType(t, common.ClashVlessBase{}, resTcp)
 
-	// Case 4: XHTTP (Clash 暂不支持，应返回 nil)
+	// Case 4: XHTTP (Clash Meta 支持)
 	proxyXhttp := config.Proxies{
 		Name:    "XhttpNode",
 		Type:    "vless",
 		Network: "xhttp",
+		XhttpOpts: config.XhttpOpts{
+			Mode: "auto",
+			Path: "/xhttp",
+			DownloadSettings: &config.DownloadSettings{
+				Server: "1.1.1.1",
+			},
+		},
 	}
 	resXhttp, nameXhttp := c.getConfig(&proxyXhttp)
-	assert.Nil(t, resXhttp)
-	assert.Empty(t, nameXhttp)
+	assert.Equal(t, "XhttpNode", nameXhttp)
+	assert.IsType(t, common.ClashVlessXhttp{}, resXhttp)
 }
 
 func TestV2rayGetConfig(t *testing.T) {
@@ -168,10 +161,9 @@ func TestV2rayGetConfig(t *testing.T) {
 	assert.Contains(t, result, "fp=chrome")
 	assert.Contains(t, result, "#test")
 
-	// Case 2: XHTTP with Extra params
+	// Case 2: XHTTP with Extra and DownloadSettings params
 	extraData := map[string]interface{}{
-		"downloadSettings": map[string]interface{}{"address": "1.1.1.1"},
-		"xhttpSettings":    map[string]interface{}{"path": "/v7"},
+		"xhttpSettings": map[string]interface{}{"path": "/v7"},
 	}
 	proxyXhttp := config.Proxies{
 		Type:    "vless",
@@ -183,16 +175,26 @@ func TestV2rayGetConfig(t *testing.T) {
 			Mode:  "auto",
 			Path:  "/path",
 			Extra: extraData,
+			DownloadSettings: &config.DownloadSettings{
+				Server: "1.1.1.1",
+				Port:   "443",
+			},
 		},
 	}
 	resultXhttp := x.getConfig(&proxyXhttp)
 
 	assert.Contains(t, resultXhttp, "type=xhttp")
 	assert.Contains(t, resultXhttp, "mode=auto")
-	assert.Contains(t, resultXhttp, "path=/path")
+	assert.Contains(t, resultXhttp, "path=%2Fpath")
 
-	// 验证 Extra 字段是否被正确 JSON 序列化并 URL 编码
-	extraJson, _ := json.Marshal(extraData)
+	expectedExtraData := map[string]interface{}{
+		"xhttpSettings": map[string]interface{}{"path": "/v7"},
+		"downloadSettings": map[string]interface{}{
+			"address": "1.1.1.1",
+			"port":    443,
+		},
+	}
+	extraJson, _ := json.Marshal(expectedExtraData)
 	encodedExtra := url.QueryEscape(string(extraJson))
 	assert.Contains(t, resultXhttp, "&extra="+encodedExtra)
 }
@@ -200,18 +202,15 @@ func TestV2rayGetConfig(t *testing.T) {
 func TestCheckUser(t *testing.T) {
 	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
 	ti := time.Now().In(time.UTC)
-	t1 := ti.AddDate(0, 1, 0).Format(time.DateOnly) // 未来
-	t2 := ti.AddDate(0, -1, 0).Format(time.DateOnly) // 过去
+	t1 := ti.AddDate(0, 1, 0).Format(time.DateOnly)
+	t2 := ti.AddDate(0, -1, 0).Format(time.DateOnly)
 
-	// 未过期
 	user := &db.Users{ExpiryDate: &t1}
 	assert.True(t, checkUser(user))
 
-	// 已过期
 	user.ExpiryDate = &t2
 	assert.False(t, checkUser(user))
 
-	// 空字符串视作不过期 (根据 checkUser 逻辑)
 	empty := ""
 	user.ExpiryDate = &empty
 	assert.True(t, checkUser(user))

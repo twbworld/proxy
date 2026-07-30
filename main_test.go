@@ -40,7 +40,6 @@ func TestMain(t *testing.T) {
 	injectTestProxies()
 
 	// 3. 启动数据库 (假设环境已配置好或使用 SQLite)
-	// 注意：在CI/CD环境中可能需要mock数据库，这里假设本地环境可用
 	if err := system.DbStart(); err != nil {
 		t.Log("警告: 数据库连接失败, 部分依赖数据库的测试可能无法通过:", err)
 	} else {
@@ -50,8 +49,15 @@ func TestMain(t *testing.T) {
 	ginServer := gin.Default()
 	router.Start(ginServer)
 
-	// 构造 XHTTP extra 参数的预期编码字符串
-	extraData := map[string]interface{}{"a": "b", "mode": "auto"}
+	// 构造 XHTTP extra 参数的预期编码字符串 (融合 downloadSettings)
+	extraData := map[string]interface{}{
+		"a": "b",
+		"downloadSettings": map[string]interface{}{
+			"address": "4.4.4.4",
+			"port":    443,
+		},
+		"mode": "auto",
+	}
 	extraBytes, _ := json.Marshal(extraData)
 	encodedExtra := url.QueryEscape(string(extraBytes))
 
@@ -59,24 +65,22 @@ func TestMain(t *testing.T) {
 	testCases := []struct {
 		name        string
 		method      string
-		url         string // 请求 URL
-		host        string // 模拟的 Host Header (用于触发 controller 的协议判断)
-		userAgent   string // 模拟 User-Agent
+		url         string
+		host        string
+		userAgent   string
 		status      int
-		shouldExist []string // 响应中应该包含的字符串
-		notExist    []string // 响应中不应该包含的字符串
+		shouldExist []string
+		notExist    []string
 	}{
 		{
-			name:      "Clash订阅-VLESS Reality & gRPC",
+			name:      "Clash订阅-VLESS Reality & gRPC & XHTTP",
 			method:    http.MethodGet,
 			url:       "http://clash.domain.com/test.html",
-			host:      "clash.domain.com", // 触发 Clash 逻辑
+			host:      "clash.domain.com",
 			userAgent: "Clash.Meta",
 			status:    http.StatusOK,
 			shouldExist: []string{
-				// 验证 YAML 结构
 				"proxies:",
-				// 验证 Reality 节点 (Clash配置中使用了JSON嵌入)
 				`"name":"Test_Reality"`,
 				`"type":"vless"`,
 				`"server":"1.1.1.1"`,
@@ -87,44 +91,45 @@ func TestMain(t *testing.T) {
 				`"name":"Test_Grpc"`,
 				`"network":"grpc"`,
 				`"grpc-service-name":"grpc_service"`,
+				// 验证 XHTTP 节点
+				`"name":"Test_Xhttp"`,
+				`"network":"xhttp"`,
+				`"download-settings":`,
+				`"server":"4.4.4.4"`,
 				// 验证 proxy-groups 包含节点名
 				`"Test_Reality"`,
 				`"Test_Grpc"`,
+				`"Test_Xhttp"`,
 			},
-			notExist: []string{
-				// XHTTP 不被 Clash 支持，应该被过滤
-				`"name":"Test_Xhttp"`,
-				`"network":"xhttp"`,
-				"Test_Xhttp", // 组里也不应该有
-			},
+			notExist: []string{},
 		},
 		{
 			name:      "v2rayN订阅-所有协议",
 			method:    http.MethodGet,
 			url:       "http://domain.com/test.html",
-			host:      "www.domain.com", // 触发 Xray 逻辑 (默认)
+			host:      "www.domain.com",
 			userAgent: "v2rayN",
 			status:    http.StatusOK,
 			shouldExist: []string{
-				// Reality
 				"vless://uuid1@1.1.1.1:443",
 				"security=reality",
 				"pbk=test_pbk",
 				"sid=test_sid",
 				"flow=xtls-rprx-vision",
 				"#Test_Reality",
-				// gRPC
+
 				"vless://uuid2@2.2.2.2:443",
 				"mode=gun",
 				"serviceName=grpc_service",
 				"authority=grpc.com",
 				"#Test_Grpc",
-				// XHTTP
+
+				// 验证 XHTTP 以及转换至 extra 里的内容
 				"vless://uuid3@3.3.3.3:443",
 				"type=xhttp",
 				"mode=auto",
-				"path=/xhttp",
-				"extra=" + encodedExtra, // 验证 JSON 序列化 + URL 编码
+				"path=%2Fxhttp",
+				"extra=" + encodedExtra,
 				"#Test_Xhttp",
 			},
 		},
@@ -133,7 +138,7 @@ func TestMain(t *testing.T) {
 			method: http.MethodGet,
 			url:    "http://domain.com/aa.html",
 			host:   "domain.com",
-			status: http.StatusMovedPermanently, // 路由中定义的行为
+			status: http.StatusMovedPermanently,
 			shouldExist: []string{
 				"Moved",
 			},
@@ -159,7 +164,6 @@ func TestMain(t *testing.T) {
 				t.Fatal("构造请求出错:", err)
 			}
 
-			// 关键：设置 Host 以触发 base.go 中的 SetProtocol 逻辑
 			if value.host != "" {
 				req.Host = value.host
 			}
@@ -175,33 +179,26 @@ func TestMain(t *testing.T) {
 
 			fmt.Printf("--- 测试用例 [%s] 耗时: %dms ---\n", value.name, time.Now().UnixMilli()-b)
 
-			// 1. 验证状态码
 			assert.Equal(t, value.status, result.StatusCode)
 
-			// 2. 读取响应体
 			bodyBytes, err := io.ReadAll(result.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
 			bodyString := string(bodyBytes)
 
-			// 3. 特殊处理：如果是 v2ray 订阅，且看起来是 Base64，则先解码再验证
-			// 注意：404 页面不是 Base64
 			checkContent := bodyString
 			if strings.Contains(value.name, "v2ray") && !strings.Contains(bodyString, "html") && !strings.Contains(bodyString, "Moved") {
 				decoded := utils.Base64Decode(bodyString)
-				// 简单的判断解码是否成功
 				if decoded != bodyString {
 					checkContent = decoded
 				}
 			}
 
-			// 4. 验证包含内容
 			for _, expect := range value.shouldExist {
 				assert.Contains(t, checkContent, expect, "响应内容应包含: "+expect)
 			}
 
-			// 5. 验证不包含内容
 			for _, notExpect := range value.notExist {
 				assert.NotContains(t, checkContent, notExpect, "响应内容不应包含: "+notExpect)
 			}
@@ -209,7 +206,6 @@ func TestMain(t *testing.T) {
 	}
 }
 
-// injectTestProxies 注入模拟的节点数据
 func injectTestProxies() {
 	global.Config.Proxies = []config.Proxies{
 		{
@@ -251,6 +247,10 @@ func injectTestProxies() {
 			XhttpOpts: config.XhttpOpts{
 				Mode: "auto",
 				Path: "/xhttp",
+				DownloadSettings: &config.DownloadSettings{
+					Server: "4.4.4.4",
+					Port:   "443",
+				},
 				Extra: map[string]interface{}{
 					"a":    "b",
 					"mode": "auto",
@@ -260,11 +260,10 @@ func injectTestProxies() {
 		{
 			Name: "Test_Ignored_Root",
 			Type: "vless",
-			Root: true, // Root 节点，非管理员不应显示
+			Root: true,
 		},
 	}
 
-	// 使用 CreateFile 创建文件 (此时 global.Config.ClashPath 已经被修改为 clash.test.yaml)
 	_ = utils.CreateFile(global.Config.ClashPath)
 	_ = writeFile(global.Config.ClashPath, []byte(`proxies: [proxies]
 proxy-groups:
@@ -272,7 +271,6 @@ proxy-groups:
     proxies: [proxies_name]`), 0644)
 }
 
-// 辅助函数：简单的写文件，避免引入过多依赖
 func writeFile(path string, data []byte, perm os.FileMode) error {
 	return os.WriteFile(path, data, perm)
 }

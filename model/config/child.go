@@ -9,10 +9,20 @@ type RealityOpts struct {
 type GrpcOpts struct {
 	GrpcServiceName string `json:"grpc-service-name" mapstructure:"grpc-service-name" yaml:"grpc-service-name"`
 }
+type DownloadSettings struct {
+	Server            string      `json:"server,omitempty" mapstructure:"server" yaml:"server"`
+	Port              string      `json:"port,omitempty" mapstructure:"port" yaml:"port"`
+	Servername        string      `json:"servername,omitempty" mapstructure:"servername" yaml:"servername"`
+	ClientFingerprint string      `json:"client-fingerprint,omitempty" mapstructure:"client-fingerprint" yaml:"client-fingerprint"`
+	RealityOpts       RealityOpts `json:"reality-opts,omitempty" mapstructure:"reality-opts" yaml:"reality-opts"`
+	Path              string      `json:"path,omitempty" mapstructure:"path" yaml:"path"`
+	Mode              string      `json:"mode,omitempty" mapstructure:"mode" yaml:"mode"`
+}
 type XhttpOpts struct {
-	Mode  string                 `json:"mode" mapstructure:"mode" yaml:"mode"`
-	Path  string                 `json:"path" mapstructure:"path" yaml:"path"`
-	Extra map[string]interface{} `json:"extra" mapstructure:"extra" yaml:"extra"`
+	Mode             string                 `json:"mode,omitempty" mapstructure:"mode" yaml:"mode"`
+	Path             string                 `json:"path,omitempty" mapstructure:"path" yaml:"path"`
+	DownloadSettings *DownloadSettings      `json:"download-settings,omitempty" mapstructure:"download-settings" yaml:"download-settings"`
+	Extra            map[string]interface{} `json:"extra,omitempty" mapstructure:"extra" yaml:"extra"`
 }
 type Proxies struct {
 	Name              string      `json:"name" mapstructure:"name" yaml:"name"`

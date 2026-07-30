@@ -4,7 +4,7 @@ mode: rule
 log-level: warning
 ipv6: false
 unified-delay: true
-global-client-fingerprint: chrome
+client-fingerprint: chrome
 external-controller: 127.0.0.1:9090
 keep-alive-interval: 30
 clash-for-android:
@@ -12,6 +12,17 @@ clash-for-android:
 tcp-concurrent: true
 dns:
   enable: true
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  enhanced-mode: fake-ip
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+  ipv6: false
 sniffer:
   enable: true
   sniff:

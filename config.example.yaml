@@ -99,21 +99,16 @@ proxies:
     xhttp-opts:
       mode: auto
       path: "/xxx"
-      extra:
-        downloadSettings:
-          address: 1.1.1.1
-          port: 443
-          network: xhttp
-          security: reality
-          realitySettings:
-            serverName: www.tesla.com
-            fingerprint: chrome
-            show: false
-            publicKey: xxx
-            shortId: ""
-          xhttpSettings:
-            path: "/xxx"
-            mode: auto
+      download-settings:
+        server: 1.1.1.1
+        port: 443
+        servername: www.tesla.com
+        client-fingerprint: chrome
+        reality-opts:
+          public-key: xxx
+          short-id: ""
+        path: "/xxx"
+        mode: auto
   # cdn:VLESS-grpc
   - name: ""
     type: vless

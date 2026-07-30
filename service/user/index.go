@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -118,8 +119,8 @@ func (c *clash) getConfig(value *config.Proxies) (any, string) {
 	p := *value
 	p.SetProxyDefault()
 
-	// 忽略不支持的 xhttp 类型
-	if p.Type != "vless" || p.Network == "xhttp" {
+	// 允许 vless 下所有类型,包括支持最新的 xhttp
+	if p.Type != "vless" {
 		return nil, ""
 	}
 
@@ -131,6 +132,9 @@ func (c *clash) getConfig(value *config.Proxies) (any, string) {
 	case p.Network == "grpc":
 		// VLESS gRPC
 		return common.ClashVlessGrpc{Proxies: &p}, p.Name
+	case p.Network == "xhttp":
+		// VLESS XHTTP
+		return common.ClashVlessXhttp{Proxies: &p}, p.Name
 	case p.Network == "tcp":
 		// VLESS TCP (TLS/Vision)
 		return common.ClashVlessBase{Proxies: &p}, p.Name
@@ -221,15 +225,59 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 	case "xhttp":
 		if p.XhttpOpts.Path != "" {
 			link.WriteString("&path=")
-			link.WriteString(p.XhttpOpts.Path)
+			link.WriteString(url.QueryEscape(p.XhttpOpts.Path))
 		}
 		if p.XhttpOpts.Mode != "" {
 			link.WriteString("&mode=")
-			link.WriteString(p.XhttpOpts.Mode)
+			link.WriteString(url.QueryEscape(p.XhttpOpts.Mode))
 		}
-		// 处理 extra 参数
+
+		// 汇总整合 Extra 和 DownloadSettings 给 v2ray 使用 (映射为规范驼峰)
+		extraMap := make(map[string]interface{})
 		if len(p.XhttpOpts.Extra) > 0 {
-			extraBytes, err := json.Marshal(p.XhttpOpts.Extra)
+			for k, v := range p.XhttpOpts.Extra {
+				extraMap[k] = v
+			}
+		}
+
+		if p.XhttpOpts.DownloadSettings != nil {
+			ds := p.XhttpOpts.DownloadSettings
+			v2rayDs := make(map[string]interface{})
+			if ds.Server != "" {
+				v2rayDs["address"] = ds.Server
+			}
+			if ds.Port != "" && ds.Port != "0" {
+				if portInt, err := strconv.Atoi(ds.Port); err == nil {
+					v2rayDs["port"] = portInt
+				} else {
+					v2rayDs["port"] = ds.Port
+				}
+			}
+			if ds.Servername != "" {
+				v2rayDs["servername"] = ds.Servername
+			}
+			if ds.ClientFingerprint != "" {
+				v2rayDs["clientFingerprint"] = ds.ClientFingerprint
+			}
+			if ds.Path != "" {
+				v2rayDs["path"] = ds.Path
+			}
+			if ds.Mode != "" {
+				v2rayDs["mode"] = ds.Mode
+			}
+			if ds.RealityOpts.PublicKey != "" {
+				v2rayDs["realitySettings"] = map[string]interface{}{
+					"publicKey": ds.RealityOpts.PublicKey,
+					"shortId":   ds.RealityOpts.ShortId,
+				}
+			}
+			if len(v2rayDs) > 0 {
+				extraMap["downloadSettings"] = v2rayDs
+			}
+		}
+
+		if len(extraMap) > 0 {
+			extraBytes, err := json.Marshal(extraMap)
 			if err == nil {
 				link.WriteString("&extra=")
 				link.WriteString(url.QueryEscape(string(extraBytes)))

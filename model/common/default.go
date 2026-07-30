@@ -24,3 +24,10 @@ type ClashVlessGrpc struct {
 	RealityOpts bool `json:"reality-opts,omitempty"`
 	XhttpOpts   bool `json:"xhttp-opts,omitempty"`
 }
+
+// 针对 XHTTP 的结构
+type ClashVlessXhttp struct {
+	*config.Proxies
+	RealityOpts bool `json:"reality-opts,omitempty"`
+	GrpcOpts    bool `json:"grpc-opts,omitempty"`
+}
