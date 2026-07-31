@@ -1,6 +1,7 @@
 package user
 
 import (
+	"cmp"
 	"fmt"
 	"strconv"
 	"strings"
@@ -31,10 +32,7 @@ func (b *BaseApi) Subscribe(ctx *gin.Context) {
 
 	//https://www.clashverge.dev/guide/url_schemes.html
 	if utils.ContainsAny(ctx.Request.UserAgent(), []string{"clash", "v2ray"}) {
-		fileName := global.Config.Subscribe.Filename
-		if fileName == "" {
-			fileName = user.Username
-		}
+		fileName := cmp.Or(global.Config.Subscribe.Filename, user.Username)
 		if fileName != "" {
 			ctx.Header("content-disposition", fmt.Sprintf("attachment; filename*=UTF-8''%s", url.QueryEscape(fileName)))
 		}

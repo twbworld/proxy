@@ -242,7 +242,7 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 		}
 
 		// 汇总整合 Extra 和 DownloadSettings 给 v2ray 使用 (映射为规范驼峰)
-		extraMap := make(map[string]any)
+		extraMap := make(map[string]any, len(p.XhttpOpts.Extra)+1)
 		if len(p.XhttpOpts.Extra) > 0 {
 			maps.Copy(extraMap, p.XhttpOpts.Extra)
 		}
@@ -300,7 +300,7 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 
 // 检测过期
 func checkUser(user *db.Users) bool {
-	if *user.ExpiryDate == "" || *user.ExpiryDate == "0" {
+	if user.ExpiryDate == nil || *user.ExpiryDate == "" || *user.ExpiryDate == "0" {
 		return true
 	}
 

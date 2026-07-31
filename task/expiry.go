@@ -1,6 +1,7 @@
 package task
 
 import (
+	"sync"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -33,6 +34,7 @@ func Expiry() error {
 	t1, t2 := now.AddDate(0, 0, -7), time.Now().In(time.UTC).AddDate(0, 0, -5)
 
 	ids := make([]uint, 0, len(users))
+	var wg sync.WaitGroup
 	for _, user := range users {
 		if user.ExpiryDate == nil || *user.ExpiryDate == "" || user.Id < 1 {
 			continue
@@ -46,9 +48,18 @@ func Expiry() error {
 		}
 
 		if t1.After(ti) && t2.Before(ti) {
-			go service.Service.UserServiceGroup.TgService.TgSend(user.Username + "快到期" + ti.Format(time.DateOnly))
+			wg.Go(func() {
+				defer func() {
+					if r := recover(); r != nil {
+						global.Log.Errorf("TgSend协程发生Panic: %v", r)
+					}
+				}()
+				_ = service.Service.UserServiceGroup.TgService.TgSend(user.Username + "快到期" + ti.Format(time.DateOnly))
+			})
 		}
 	}
+	wg.Wait()
+
 	if len(ids) == 0 {
 		global.Log.Infoln("没有过期用户[ofijsdfio]")
 		return nil

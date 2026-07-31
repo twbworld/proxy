@@ -2,12 +2,12 @@ package system
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model/db"
-	"github.com/twbworld/proxy/utils"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -142,7 +142,7 @@ func (s *sqlite) createTable() error {
 
 	err = dao.Tx(func(tx *sqlx.Tx) (e error) {
 		for k, v := range sqls {
-			if utils.InSlice(u, k) < 0 {
+			if !slices.Contains(u, k) {
 				for _, val := range v {
 					if _, e := tx.Exec(fmt.Sprintf(val, k)); e != nil {
 						return fmt.Errorf("错误[ghjbcvgs]:  %s\n%w", val, e)
@@ -176,7 +176,7 @@ func (m *mysql) createTable() error {
 
 	err = dao.Tx(func(tx *sqlx.Tx) (e error) {
 		for k, v := range sqls {
-			if utils.InSlice(u, k) < 0 {
+			if !slices.Contains(u, k) {
 				if _, e := tx.Exec(fmt.Sprintf(v, k)); e != nil {
 					return fmt.Errorf("插入数据失败: %s\n%w", k, err)
 				}

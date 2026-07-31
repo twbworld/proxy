@@ -10,7 +10,7 @@ type Response struct {
 	Code  int8   `json:"code"`
 	Data  any    `json:"data"`
 	Msg   string `json:"msg"`
-	Token string `json:"token,omitempty"`
+	Token string `json:"token,omitzero"`
 }
 
 const (

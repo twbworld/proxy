@@ -2,8 +2,8 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
-	"github.com/jxskiss/ginregex"
 	"github.com/twbworld/proxy/controller"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/middleware"
@@ -48,7 +48,18 @@ func Start(ginServer *gin.Engine) {
 	}
 
 	// gin路由不支持正则,我服了
-	regexRouter := ginregex.New(ginServer, nil)
-	regexRouter.GET(`^/(.*)\.html$`, middleware.ValidatorSubscribe, controller.Api.UserApiGroup.BaseApi.Subscribe)
+	ginServer.GET("/:filename", func(ctx *gin.Context) {
+		filename := ctx.Param("filename")
+		if userName, ok := strings.CutSuffix(filename, ".html"); ok && userName != "404" {
+			ctx.Set("userName", userName) // 设置用户名到上下文中,方便后续使用
+			middleware.ValidatorSubscribe(ctx)
+			if !ctx.IsAborted() {
+				controller.Api.UserApiGroup.BaseApi.Subscribe(ctx)
+			}
+			return
+		}
+		ctx.Request.URL.Path = "/404.html"
+		ginServer.HandleContext(ctx)
+	})
 
 }

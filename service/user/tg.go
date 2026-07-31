@@ -32,6 +32,18 @@ var (
 	lock          sync.RWMutex
 )
 
+// 安全启动协程，捕获 panic 防止主程序崩溃
+func safeGo(fn func()) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				global.Log.Errorf("TG服务协程发生Panic: %v", r)
+			}
+		}()
+		fn()
+	}()
+}
+
 // 向Tg发送信息(请用协程执行)
 func (t *TgService) TgSend(text string) (err error) {
 	if global.Bot == nil {
@@ -245,11 +257,11 @@ func (c *tgConfig) firstStep() error {
 		msg.ParseMode = "MarkdownV2"
 	}
 SEND:
-	go func() {
+	safeGo(func() {
 		if _, err := global.Bot.Send(msg); err != nil {
 			global.Log.Error(err)
 		}
-	}()
+	})
 	return nil
 }
 
@@ -277,11 +289,11 @@ func (c *tgConfig) selectUser() error {
 		msg := tg.NewEditMessageTextAndMarkup(c.update.CallbackQuery.Message.Chat.ID, c.update.CallbackQuery.Message.MessageID, "选择*查询*的用户", tg.NewInlineKeyboardMarkup(mkrow...))
 		msg.ParseMode = "MarkdownV2"
 
-		go func() {
+		safeGo(func() {
 			if _, err := global.Bot.Send(msg); err != nil {
 				global.Log.Error("错误[iofgjiosj]" + err.Error())
 			}
-		}()
+		})
 
 	case "user_insert":
 		err = dao.Tx(func(tx *sqlx.Tx) (e error) {
@@ -291,22 +303,22 @@ func (c *tgConfig) selectUser() error {
 			return err
 		}
 
-		msg := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "请输入用户名称, 4\\-64个字符以内的英文/数字/符号\n例:`210606_abc`")
-		msg.ParseMode = "MarkdownV2"
+		msg2 := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "请输入用户名称, 4\\-64个字符以内的英文/数字/符号\n例:`210606_abc`")
+		msg2.ParseMode = "MarkdownV2"
 
-		go func() {
-			if _, err := global.Bot.Send(msg); err != nil {
+		safeGo(func() {
+			if _, err := global.Bot.Send(msg2); err != nil {
 				global.Log.Error("错误[iofgjfiosj]" + err.Error())
 			}
-		}()
+		})
 
 	default:
-		msg := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "命令不存在!!!")
-		go func() {
-			if _, err := global.Bot.Send(msg); err != nil {
+		msg3 := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "命令不存在!!!")
+		safeGo(func() {
+			if _, err := global.Bot.Send(msg3); err != nil {
 				global.Log.Error("错误[iofgsjiosj]" + err.Error())
 			}
-		}()
+		})
 	}
 
 	return nil
@@ -347,11 +359,11 @@ func (c *tgConfig) actionType(act string, userId uint) error {
 	}
 
 SEND3:
-	go func() {
+	safeGo(func() {
 		if _, err := global.Bot.Send(msg); err != nil {
 			global.Log.Error(err)
 		}
-	}()
+	})
 	return nil
 }
 
@@ -374,11 +386,11 @@ func (c *tgConfig) input(userId uint, value string) error {
 		msg.Text = "命令不存在!!!"
 	}
 
-	go func() {
+	safeGo(func() {
 		if _, err := global.Bot.Send(msg); err != nil {
 			global.Log.Error("错误[iodiosj]" + err.Error())
 		}
-	}()
+	})
 
 	return dao.Tx(func(tx *sqlx.Tx) (e error) {
 		return dao.App.SystemInfoDb.SaveSysVal(strconv.FormatInt(c.update.CallbackQuery.Message.Chat.ID, 10)+"_step", c.update.CallbackQuery.Data, tx)
@@ -438,11 +450,11 @@ func (c *tgConfig) userInsert(info *db.SystemInfo) (err error) {
 	)
 
 SEND2:
-	go func() {
+	safeGo(func() {
 		if _, err := global.Bot.Send(msg); err != nil {
 			global.Log.Error(err)
 		}
-	}()
+	})
 	return nil
 }
 

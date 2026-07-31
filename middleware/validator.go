@@ -29,13 +29,7 @@ func ValidatorTgToken(ctx *gin.Context) {
 }
 
 func ValidatorSubscribe(ctx *gin.Context) {
-	params := urlPattern.FindStringSubmatch(ctx.Request.URL.Path)
-	if len(params) < 2 {
-		ctx.Abort()
-		ctx.Redirect(http.StatusMovedPermanently, "/404.html")
-		return
-	}
-	userName := params[1]
+	userName := ctx.GetString("userName")
 	if userName == "" || len(userName) < 3 || len(userName) > 50 {
 		ctx.Abort()
 		ctx.Redirect(http.StatusMovedPermanently, "/404.html")

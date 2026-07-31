@@ -71,18 +71,14 @@ func TestListToMap(t *testing.T) {
 		{Key: "a", Value: "1"},
 		{Key: "b", Value: "2"},
 	}
-	result := ListToMap(list, "Key")
-	expected := map[string]any{
-		"a": Item{Key: "a", Value: "1"},
-		"b": Item{Key: "b", Value: "2"},
+	result := ListToMap(list, func(item Item) string {
+		return item.Key
+	})
+	expected := map[string]Item{
+		"a": {Key: "a", Value: "1"},
+		"b": {Key: "b", Value: "2"},
 	}
 	assert.Equal(t, expected, result)
-}
-
-func TestInSlice(t *testing.T) {
-	slice := []string{"a", "b", "c"}
-	assert.Equal(t, 1, InSlice(slice, "b"))
-	assert.Equal(t, -1, InSlice(slice, "d"))
 }
 
 func TestUnion(t *testing.T) {

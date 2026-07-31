@@ -9,7 +9,6 @@ require (
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/jmoiron/sqlx v1.4.0
-	github.com/jxskiss/ginregex v0.2.0
 	github.com/mattn/go-sqlite3 v1.14.49
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.9.4

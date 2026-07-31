@@ -1,6 +1,7 @@
 package global
 
 import (
+	"cmp"
 	"flag"
 	"fmt"
 	"strings"
@@ -27,20 +28,16 @@ func init() {
 }
 
 func New(configFile ...string) *GlobalInit {
-	var config string
 	if gin.Mode() != gin.TestMode {
 		//避免 单元测试(go test)自动加参数, 导致flag报错
 		flag.Parse() //解析cli命令参数
-		if Conf != "" {
-			config = Conf
-		}
 	}
-	if config == "" && len(configFile) > 0 {
-		config = configFile[0]
+	confArg := ""
+	if len(configFile) > 0 {
+		confArg = configFile[0]
 	}
-	if config == "" {
-		config = `config.yaml`
-	}
+
+	config := cmp.Or(Conf, confArg, "config.yaml")
 
 	// 初始化 viper
 	v := viper.New()

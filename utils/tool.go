@@ -7,7 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -91,69 +91,54 @@ func CreateFile(path string) error {
 	return nil
 }
 
+// func ListToMap(list any, key string) map[string]any {
+// 	v := reflect.ValueOf(list)
+// 	if v.Kind() != reflect.Slice {
+// 		return nil
+// 	}
+
+// 	res := make(map[string]any, v.Len())
+// 	for i := 0; i < v.Len(); i++ {
+// 		item := v.Index(i).Interface()
+// 		itemValue := reflect.ValueOf(item)
+// 		keyValue := itemValue.FieldByName(key)
+// 		if keyValue.IsValid() && keyValue.Kind() == reflect.String {
+// 			res[keyValue.String()] = item
+// 		}
+// 	}
+
+//		return res
+//	}
+//
+// ListToMap 转换为map(使用泛型替代反射重构)
 // 类似php的array_column($a, null, 'key')
-func ListToMap(list any, key string) map[string]any {
-	v := reflect.ValueOf(list)
-	if v.Kind() != reflect.Slice {
-		return nil
+func ListToMap[E any, K comparable](list []E, keyFunc func(E) K) map[K]E {
+	res := make(map[K]E, len(list))
+	for _, v := range list {
+		res[keyFunc(v)] = v
 	}
-
-	res := make(map[string]any, v.Len())
-	for i := 0; i < v.Len(); i++ {
-		item := v.Index(i).Interface()
-		itemValue := reflect.ValueOf(item)
-		keyValue := itemValue.FieldByName(key)
-		if keyValue.IsValid() && keyValue.Kind() == reflect.String {
-			res[keyValue.String()] = item
-		}
-	}
-
 	return res
-}
-
-// 判断字符串是否在切片中
-func InSlice(slice []string, value string) int {
-	//上层尽量使用map, 会更快;
-
-	for i, item := range slice {
-		if item == value {
-			return i
-		}
-	}
-	return -1
 }
 
 // 判断一个字符串是否包含多个子字符串中的任意一个
 func ContainsAny(str string, substrs []string) bool {
-	for _, substr := range substrs {
-		if strings.Contains(str, substr) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(substrs, func(s string) bool {
+		return strings.Contains(str, s)
+	})
 }
 
 // 取两个切片的交集
-func Union[T string | Number](slice1, slice2 []T) []T {
-	// 创建一个空的哈希集合用于存储第一个切片的元素
-	set1 := make(map[T]struct{})
+func Union[T comparable](slice1, slice2 []T) []T {
+	set1 := make(map[T]struct{}, len(slice1))
 	for _, elem := range slice1 {
 		set1[elem] = struct{}{}
 	}
 
-	// 创建一个空的哈希集合用于存储交集
-	intersectionSet := make(map[T]struct{})
+	var result []T
 	for _, elem := range slice2 {
 		if _, exists := set1[elem]; exists {
-			intersectionSet[elem] = struct{}{}
+			result = append(result, elem)
 		}
 	}
-
-	// 将交集哈希集合中的所有元素转换为一个切片
-	result := make([]T, 0, len(intersectionSet))
-	for elem := range intersectionSet {
-		result = append(result, elem)
-	}
-
-	return result
+	return slices.Clip(result)
 }

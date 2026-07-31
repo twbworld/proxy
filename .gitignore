@@ -73,6 +73,7 @@ ehthumbs_vista.db
 .env
 /config.yaml
 /*.db
+repomix-output.xml
 
 
 /worktree*/
