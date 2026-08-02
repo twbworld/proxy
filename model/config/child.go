@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type RealityOpts struct {
 	PublicKey string `json:"public-key" mapstructure:"public-key" yaml:"public-key"`
@@ -72,7 +75,21 @@ func (p *Proxies) SetProxyDefault() {
 	}
 
 	if p.Name == "" {
-		p.Name = fmt.Sprintf("外网信息复杂_理智分辨真假_%s_%s", p.Server, p.Port)
+		var name strings.Builder
+		if !p.Root {
+			name.WriteString("外网信息复杂_理智分辨真假_")
+		}
+		name.WriteString(fmt.Sprintf("%s_%s", p.Network, p.Server))
+		if p.RealityOpts.PublicKey != "" {
+			name.WriteString("_reality")
+		}
+		if p.Flow != "" {
+			name.WriteString(fmt.Sprintf("_%s", p.Flow))
+		}
+		if p.XhttpOpts.DownloadSettings != nil && p.XhttpOpts.DownloadSettings.Server != "" {
+			name.WriteString("_downSet")
+		}
+		p.Name = name.String()
 	}
 	if p.ClientFingerprint == "" {
 		p.ClientFingerprint = "chrome"
