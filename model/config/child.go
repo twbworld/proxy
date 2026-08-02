@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"strings"
 )
 
@@ -39,7 +40,7 @@ type Proxies struct {
 	Alpn              []string    `json:"alpn" mapstructure:"alpn" yaml:"alpn"`
 	Servername        string      `json:"servername" mapstructure:"servername" yaml:"servername"`
 	Uuid              string      `json:"uuid" mapstructure:"uuid" yaml:"uuid"`
-	Flow              string      `json:"flow" mapstructure:"flow" yaml:"flow"`
+	Flow              string      `json:"flow,omitzero" mapstructure:"flow" yaml:"flow"`
 	Network           string      `json:"network" mapstructure:"network" yaml:"network"`
 	RealityOpts       RealityOpts `json:"reality-opts,omitzero" mapstructure:"reality-opts" yaml:"reality-opts"`
 	GrpcOpts          GrpcOpts    `json:"grpc-opts,omitzero" mapstructure:"grpc-opts" yaml:"grpc-opts"`
@@ -69,8 +70,8 @@ type Telegram struct {
 }
 
 func (p *Proxies) SetProxyDefault() {
-	// 如果 Servername 仍为空，且 Server 看起来像域名（简单判断），则兜底
-	if p.Servername == "" && p.Server != "" {
+	// 如果 Servername 仍为空，且 Server 看起来像域名（排查非 IPv4/IPv6 地址），则兜底
+	if p.Servername == "" && p.Server != "" && net.ParseIP(strings.Trim(p.Server, "[]")) == nil {
 		p.Servername = p.Server
 	}
 

@@ -194,8 +194,10 @@ func TestV2rayGetConfig(t *testing.T) {
 	expectedExtraData := map[string]any{
 		"xhttpSettings": map[string]any{"path": "/v7"},
 		"downloadSettings": map[string]any{
-			"address": "1.1.1.1",
-			"port":    443,
+			"address":  "1.1.1.1",
+			"port":     443,
+			"network":  "xhttp",
+			"security": "tls",
 		},
 	}
 	extraJson, _ := json.Marshal(expectedExtraData)

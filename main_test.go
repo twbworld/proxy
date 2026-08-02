@@ -53,8 +53,10 @@ func TestMain(t *testing.T) {
 	extraData := map[string]any{
 		"a": "b",
 		"downloadSettings": map[string]any{
-			"address": "4.4.4.4",
-			"port":    443,
+			"address":  "4.4.4.4",
+			"port":     443,
+			"network":  "xhttp",
+			"security": "tls",
 		},
 		"mode": "auto",
 	}

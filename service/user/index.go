@@ -3,6 +3,7 @@ package user
 import (
 	"encoding/json"
 	"maps"
+	"net"
 	"net/url"
 	"os"
 	"strconv"
@@ -166,9 +167,8 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 	link.WriteString("://")
 	link.WriteString(p.Uuid)
 	link.WriteString("@")
-	link.WriteString(p.Server)
-	link.WriteString(":")
-	link.WriteString(p.Port)
+	// JoinHostPort判断IPv6会加上[]
+	link.WriteString(net.JoinHostPort(strings.Trim(p.Server, "[]"), p.Port))
 
 	// 公共参数
 	link.WriteString("?encryption=none")
@@ -260,24 +260,49 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 					v2rayDs["port"] = ds.Port
 				}
 			}
-			if ds.Servername != "" {
-				v2rayDs["servername"] = ds.Servername
-			}
-			if ds.ClientFingerprint != "" {
-				v2rayDs["clientFingerprint"] = ds.ClientFingerprint
-			}
+
+			v2rayDs["network"] = "xhttp"
+
+			// 构建 xhttpSettings 层级
+			xhttpSet := make(map[string]any)
 			if ds.Path != "" {
-				v2rayDs["path"] = ds.Path
+				xhttpSet["path"] = ds.Path
 			}
 			if ds.Mode != "" {
-				v2rayDs["mode"] = ds.Mode
+				xhttpSet["mode"] = ds.Mode
 			}
+			if len(xhttpSet) > 0 {
+				v2rayDs["xhttpSettings"] = xhttpSet
+			}
+
+			// 构建 realitySettings 或 tlsSettings 层级
 			if ds.RealityOpts.PublicKey != "" {
-				v2rayDs["realitySettings"] = map[string]any{
+				v2rayDs["security"] = "reality"
+				realitySet := map[string]any{
 					"publicKey": ds.RealityOpts.PublicKey,
 					"shortId":   ds.RealityOpts.ShortId,
 				}
+				if ds.Servername != "" {
+					realitySet["serverName"] = ds.Servername
+				}
+				if ds.ClientFingerprint != "" {
+					realitySet["fingerprint"] = ds.ClientFingerprint
+				}
+				v2rayDs["realitySettings"] = realitySet
+			} else {
+				v2rayDs["security"] = "tls"
+				tlsSet := make(map[string]any)
+				if ds.Servername != "" {
+					tlsSet["serverName"] = ds.Servername
+				}
+				if ds.ClientFingerprint != "" {
+					tlsSet["fingerprint"] = ds.ClientFingerprint
+				}
+				if len(tlsSet) > 0 {
+					v2rayDs["tlsSettings"] = tlsSet
+				}
 			}
+
 			if len(v2rayDs) > 0 {
 				extraMap["downloadSettings"] = v2rayDs
 			}
@@ -293,7 +318,7 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 	}
 
 	link.WriteString("#")
-	link.WriteString(p.Name)
+	link.WriteString(url.QueryEscape(p.Name))
 
 	return link.String()
 }
