@@ -34,7 +34,7 @@ func TestClashHandle(t *testing.T) {
 		Name:        "test_node",
 		Type:        "vless",
 		Server:      "1.1.1.1",
-		Port:        "443",
+		Port:        443,
 		Flow:        "xtls-rprx-vision",
 		Network:     "tcp",
 		RealityOpts: config.RealityOpts{PublicKey: "test_pbk", ShortId: "test_sid"},
@@ -70,7 +70,7 @@ func TestV2rayHandle(t *testing.T) {
 	proxy := config.Proxies{
 		Type:       "vless",
 		Server:     "server1",
-		Port:       "443",
+		Port:       443,
 		Uuid:       "xxx",
 		Network:    "tcp",
 		Servername: "example.com",
@@ -82,7 +82,7 @@ func TestV2rayHandle(t *testing.T) {
 	result := x.Handle(user)
 	decodedResult := utils.Base64Decode(result)
 
-	expectedPrefix := fmt.Sprintf("%s://%s@%s:%s?", proxy.Type, proxy.Uuid, proxy.Server, proxy.Port)
+	expectedPrefix := fmt.Sprintf("%s://%s@%s:%d?", proxy.Type, proxy.Uuid, proxy.Server, proxy.Port)
 	assert.Contains(t, decodedResult, expectedPrefix)
 	assert.Contains(t, decodedResult, "encryption=none")
 	assert.Contains(t, decodedResult, "security=tls")
@@ -154,7 +154,7 @@ func TestV2rayGetConfig(t *testing.T) {
 	proxy := config.Proxies{
 		Type:              "vless",
 		Server:            "server1",
-		Port:              "443",
+		Port:              443,
 		Uuid:              "uuid1",
 		ClientFingerprint: "chrome",
 		Name:              "test",
@@ -172,7 +172,7 @@ func TestV2rayGetConfig(t *testing.T) {
 	proxyXhttp := config.Proxies{
 		Type:    "vless",
 		Server:  "server2",
-		Port:    "443",
+		Port:    443,
 		Uuid:    "uuid2",
 		Network: "xhttp",
 		XhttpOpts: config.XhttpOpts{
@@ -181,7 +181,7 @@ func TestV2rayGetConfig(t *testing.T) {
 			Extra: extraData,
 			DownloadSettings: &config.DownloadSettings{
 				Server: "1.1.1.1",
-				Port:   "443",
+				Port:   443,
 			},
 		},
 	}

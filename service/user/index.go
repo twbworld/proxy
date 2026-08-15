@@ -1,12 +1,13 @@
 package user
 
 import (
+	"cmp"
 	"encoding/json"
+	"fmt"
 	"maps"
 	"net"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -158,7 +159,7 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 	p := *value
 	p.SetProxyDefault()
 
-	if p.Type == "" || p.Server == "" || p.Port == "" {
+	if p.Type == "" || p.Server == "" || p.Port == 0 {
 		return ""
 	}
 
@@ -168,7 +169,7 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 	link.WriteString(p.Uuid)
 	link.WriteString("@")
 	// JoinHostPort判断IPv6会加上[]
-	link.WriteString(net.JoinHostPort(strings.Trim(p.Server, "[]"), p.Port))
+	link.WriteString(net.JoinHostPort(strings.Trim(p.Server, "[]"), fmt.Sprint(p.Port)))
 
 	// 公共参数
 	link.WriteString("?encryption=none")
@@ -253,13 +254,8 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 			if ds.Server != "" {
 				v2rayDs["address"] = ds.Server
 			}
-			if ds.Port != "" && ds.Port != "0" {
-				if portInt, err := strconv.Atoi(ds.Port); err == nil {
-					v2rayDs["port"] = portInt
-				} else {
-					v2rayDs["port"] = ds.Port
-				}
-			}
+
+			v2rayDs["port"] = cmp.Or(ds.Port, 443)
 
 			v2rayDs["network"] = "xhttp"
 

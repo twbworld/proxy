@@ -15,7 +15,7 @@ type GrpcOpts struct {
 }
 type DownloadSettings struct {
 	Server            string      `json:"server,omitzero" mapstructure:"server" yaml:"server"`
-	Port              string      `json:"port,omitzero" mapstructure:"port" yaml:"port"`
+	Port              uint        `json:"port,omitzero" mapstructure:"port" yaml:"port"`
 	Servername        string      `json:"servername,omitzero" mapstructure:"servername" yaml:"servername"`
 	ClientFingerprint string      `json:"client-fingerprint,omitzero" mapstructure:"client-fingerprint" yaml:"client-fingerprint"`
 	RealityOpts       RealityOpts `json:"reality-opts,omitzero" mapstructure:"reality-opts" yaml:"reality-opts"`
@@ -32,7 +32,7 @@ type Proxies struct {
 	Name              string      `json:"name" mapstructure:"name" yaml:"name"`
 	Type              string      `json:"type" mapstructure:"type" yaml:"type"`
 	Server            string      `json:"server" mapstructure:"server" yaml:"server"`
-	Port              string      `json:"port" mapstructure:"port" yaml:"port"`
+	Port              uint        `json:"port,omitzero" mapstructure:"port" yaml:"port"`
 	Tls               bool        `json:"tls" mapstructure:"tls" yaml:"tls"`
 	Udp               bool        `json:"udp" mapstructure:"udp" yaml:"udp"`
 	SkipCertVerify    bool        `json:"skip-cert-verify" mapstructure:"skip-cert-verify" yaml:"skip-cert-verify"`
