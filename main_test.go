@@ -75,7 +75,7 @@ func TestMain(t *testing.T) {
 		notExist    []string
 	}{
 		{
-			name:      "Clash订阅-VLESS Reality & gRPC & XHTTP",
+			name:      "Clash订阅-VLESS Reality & XHTTP",
 			method:    http.MethodGet,
 			url:       "http://clash.domain.com/test.html",
 			host:      "clash.domain.com",
@@ -89,10 +89,10 @@ func TestMain(t *testing.T) {
 				`"flow":"xtls-rprx-vision"`,
 				`"public-key":"test_pbk"`,
 				`"short-id":"test_sid"`,
-				// 验证 gRPC 节点
-				`"name":"Test_Grpc"`,
-				`"network":"grpc"`,
-				`"grpc-service-name":"grpc_service"`,
+				// 验证 XHTTP Pure 节点
+				`"name":"Test_Xhttp_Pure"`,
+				`"network":"xhttp"`,
+				`"mode":"stream-up"`,
 				// 验证 XHTTP 节点
 				`"name":"Test_Xhttp"`,
 				`"network":"xhttp"`,
@@ -100,7 +100,7 @@ func TestMain(t *testing.T) {
 				`"server":"4.4.4.4"`,
 				// 验证 proxy-groups 包含节点名
 				`"Test_Reality"`,
-				`"Test_Grpc"`,
+				`"Test_Xhttp_Pure"`,
 				`"Test_Xhttp"`,
 			},
 			notExist: []string{},
@@ -120,11 +120,11 @@ func TestMain(t *testing.T) {
 				"flow=xtls-rprx-vision",
 				"#Test_Reality",
 
-				"vless://uuid2@2.2.2.2:443",
-				"mode=gun",
-				"serviceName=grpc_service",
-				"authority=grpc.com",
-				"#Test_Grpc",
+				"vless://uuid2@104.21.2.96:443",
+				"type=xhttp",
+				"mode=stream-up",
+				"host=xg.404502.xyz",
+				"#Test_Xhttp_Pure",
 
 				// 验证 XHTTP 以及转换至 extra 里的内容
 				"vless://uuid3@3.3.3.3:443",
@@ -225,16 +225,17 @@ func injectTestProxies() {
 			},
 		},
 		{
-			Name:       "Test_Grpc",
+			Name:       "Test_Xhttp_Pure",
 			Type:       "vless",
-			Server:     "2.2.2.2",
+			Server:     "104.21.2.96",
 			Port:       443,
 			Uuid:       "uuid2",
-			Network:    "grpc",
-			Servername: "grpc.com",
+			Network:    "xhttp",
+			Servername: "xg.404502.xyz",
 			Tls:        true,
-			GrpcOpts: config.GrpcOpts{
-				GrpcServiceName: "grpc_service",
+			XhttpOpts: config.XhttpOpts{
+				Mode: "stream-up",
+				Path: "/4vowjz0s",
 			},
 		},
 		{

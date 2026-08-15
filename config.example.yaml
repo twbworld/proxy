@@ -109,7 +109,7 @@ proxies:
           short-id: ""
         path: "/xxx"
         mode: auto
-  # cdn:VLESS-grpc
+  # cdn:VLESS-xhttp
   - name: ""
     type: vless
     server: x.x.x.x
@@ -118,10 +118,11 @@ proxies:
     udp: true
     tls: true
     servername: x.x.x.x
-    network: grpc
-    grpc-opts:
-      grpc-service-name: xxx
+    network: xhttp
     client-fingerprint: chrome
     alpn:
       - h2
     skip-cert-verify: false
+    xhttp-opts:
+      mode: stream-up
+      path: "/xxx"

@@ -130,23 +130,15 @@ func (c *clash) getConfig(value *config.Proxies) (any, string) {
 	switch {
 	case p.Flow == "xtls-rprx-vision" && p.RealityOpts.PublicKey != "":
 		// VLESS Reality (TCP)
-		p.GrpcOpts = config.GrpcOpts{}
-		p.XhttpOpts = config.XhttpOpts{}
-		return &p, p.Name
-	case p.Network == "grpc":
-		// VLESS gRPC
-		p.RealityOpts = config.RealityOpts{}
 		p.XhttpOpts = config.XhttpOpts{}
 		return &p, p.Name
 	case p.Network == "xhttp":
 		// VLESS XHTTP
 		p.RealityOpts = config.RealityOpts{}
-		p.GrpcOpts = config.GrpcOpts{}
 		return &p, p.Name
 	case p.Network == "tcp":
 		// VLESS TCP (TLS/Vision)
 		p.RealityOpts = config.RealityOpts{}
-		p.GrpcOpts = config.GrpcOpts{}
 		p.XhttpOpts = config.XhttpOpts{}
 		return &p, p.Name
 	default:
@@ -221,17 +213,6 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 			link.WriteString("&sid=")
 			link.WriteString(p.RealityOpts.ShortId)
 		}
-	case "grpc":
-		if p.GrpcOpts.GrpcServiceName != "" {
-			link.WriteString("&serviceName=")
-			link.WriteString(p.GrpcOpts.GrpcServiceName)
-		}
-		link.WriteString("&mode=gun")
-		// gRPC 通常需要 authority
-		if p.Servername != "" {
-			link.WriteString("&authority=")
-			link.WriteString(p.Servername)
-		}
 	case "xhttp":
 		if p.XhttpOpts.Path != "" {
 			link.WriteString("&path=")
@@ -240,6 +221,10 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 		if p.XhttpOpts.Mode != "" {
 			link.WriteString("&mode=")
 			link.WriteString(url.QueryEscape(p.XhttpOpts.Mode))
+		}
+		if p.Servername != "" {
+			link.WriteString("&host=")
+			link.WriteString(url.QueryEscape(p.Servername))
 		}
 
 		// 汇总整合 Extra 和 DownloadSettings 给 v2ray 使用 (映射为规范驼峰)

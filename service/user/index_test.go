@@ -101,23 +101,23 @@ func TestClashGetConfig(t *testing.T) {
 		Network:     "tcp",
 		Flow:        "xtls-rprx-vision",
 		RealityOpts: config.RealityOpts{PublicKey: "pk"},
-		GrpcOpts:    config.GrpcOpts{GrpcServiceName: "dirty-data"}, // 测试脏数据是否被成功抹除
+		XhttpOpts:   config.XhttpOpts{Path: "/dirty-data"}, // 测试脏数据是否被成功抹除
 	}
 	resReality, nameReality := c.getConfig(&proxyReality)
 	assert.Equal(t, "RealityNode", nameReality)
 	assert.IsType(t, &config.Proxies{}, resReality)
 	// 断言：无关数据已被置为零值，以确保 omitzero 能生效
-	assert.Empty(t, resReality.(*config.Proxies).GrpcOpts.GrpcServiceName)
+	assert.Empty(t, resReality.(*config.Proxies).XhttpOpts.Path)
 
-	// Case 2: VLESS gRPC
-	proxyGrpc := config.Proxies{
-		Name:    "GrpcNode",
+	// Case 2: VLESS XHTTP
+	proxyXhttpBase := config.Proxies{
+		Name:    "XhttpNodeBase",
 		Type:    "vless",
-		Network: "grpc",
+		Network: "xhttp",
 	}
-	resGrpc, nameGrpc := c.getConfig(&proxyGrpc)
-	assert.Equal(t, "GrpcNode", nameGrpc)
-	assert.IsType(t, &config.Proxies{}, resGrpc)
+	resXhttpBase, nameXhttpBase := c.getConfig(&proxyXhttpBase)
+	assert.Equal(t, "XhttpNodeBase", nameXhttpBase)
+	assert.IsType(t, &config.Proxies{}, resXhttpBase)
 
 	// Case 3: VLESS TCP (Base)
 	proxyTcp := config.Proxies{
@@ -190,6 +190,7 @@ func TestV2rayGetConfig(t *testing.T) {
 	assert.Contains(t, resultXhttp, "type=xhttp")
 	assert.Contains(t, resultXhttp, "mode=auto")
 	assert.Contains(t, resultXhttp, "path=%2Fpath")
+	assert.Contains(t, resultXhttp, "host=server2")
 
 	expectedExtraData := map[string]any{
 		"xhttpSettings": map[string]any{"path": "/v7"},

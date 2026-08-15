@@ -10,9 +10,6 @@ type RealityOpts struct {
 	PublicKey string `json:"public-key" mapstructure:"public-key" yaml:"public-key"`
 	ShortId   string `json:"short-id" mapstructure:"short-id" yaml:"short-id"`
 }
-type GrpcOpts struct {
-	GrpcServiceName string `json:"grpc-service-name" mapstructure:"grpc-service-name" yaml:"grpc-service-name"`
-}
 type DownloadSettings struct {
 	Server            string      `json:"server,omitzero" mapstructure:"server" yaml:"server"`
 	Port              uint        `json:"port,omitzero" mapstructure:"port" yaml:"port"`
@@ -43,9 +40,8 @@ type Proxies struct {
 	Flow              string      `json:"flow,omitzero" mapstructure:"flow" yaml:"flow"`
 	Network           string      `json:"network" mapstructure:"network" yaml:"network"`
 	RealityOpts       RealityOpts `json:"reality-opts,omitzero" mapstructure:"reality-opts" yaml:"reality-opts"`
-	GrpcOpts          GrpcOpts    `json:"grpc-opts,omitzero" mapstructure:"grpc-opts" yaml:"grpc-opts"`
 	XhttpOpts         XhttpOpts   `json:"xhttp-opts,omitzero" mapstructure:"xhttp-opts" yaml:"xhttp-opts"`
-	Root              bool        `json:"root,omitzero" mapstructure:"root" yaml:"root"`
+	Root              bool        `json:"-" mapstructure:"root" yaml:"root"`
 }
 
 type Subscribe struct {
