@@ -18,10 +18,10 @@ func Start(ginServer *gin.Engine) {
 
 	ginServer.Use(middleware.CorsHandle(), middleware.OptionsMethod) //全局中间件
 
-	ginServer.StaticFile("/favicon.ico", global.Config.StaticDir+"/favicon.ico")
-	ginServer.StaticFile("/robots.txt", global.Config.StaticDir+"/robots.txt")
-	ginServer.LoadHTMLGlob(global.Config.StaticDir + "/*.html")
-	ginServer.StaticFS("/static", http.Dir(global.Config.StaticDir))
+	ginServer.StaticFile("/favicon.ico", global.Config().StaticDir+"/favicon.ico")
+	ginServer.StaticFile("/robots.txt", global.Config().StaticDir+"/robots.txt")
+	ginServer.LoadHTMLGlob(global.Config().StaticDir + "/*.html")
+	ginServer.StaticFS("/static", http.Dir(global.Config().StaticDir))
 
 	// 错误处理路由
 	errorRoutes := []string{"404.html", "40x.html", "50x.html"}
@@ -34,32 +34,34 @@ func Start(ginServer *gin.Engine) {
 		})
 	}
 
+	ginServer.GET("/", func(ctx *gin.Context) {
+		ctx.HTML(http.StatusOK, "404.html", nil)
+	})
+
 	ginServer.NoRoute(func(ctx *gin.Context) {
-		//内部重定向
-		ctx.Request.URL.Path = "/404.html"
-		ginServer.HandleContext(ctx)
-		//http重定向
-		// ctx.Redirect(http.StatusMovedPermanently, "/404.html")
+		if strings.Contains(ctx.Request.Header.Get("Accept"), "text/html") {
+			ctx.HTML(http.StatusNotFound, "404.html", gin.H{"status": "404"})
+		} else {
+			common.FailNotFound(ctx)
+		}
 	})
 
 	wh := ginServer.Group("wh")
 	{
-		wh.POST("/tg/:token", middleware.ValidatorTgToken, controller.Api.UserApiGroup.TgApi.Tg)
+		wh.POST("/tg/:token", middleware.ValidatorBotToken, controller.Admin.BotApi.Webhook)
 	}
 
 	// gin路由不支持正则,我服了
 	ginServer.GET("/:filename", func(ctx *gin.Context) {
 		filename := ctx.Param("filename")
-		if userName, ok := strings.CutSuffix(filename, ".html"); ok && userName != "404" {
-			ctx.Set("userName", userName) // 设置用户名到上下文中,方便后续使用
-			middleware.ValidatorSubscribe(ctx)
-			if !ctx.IsAborted() {
-				controller.Api.UserApiGroup.BaseApi.Subscribe(ctx)
-			}
+		userName, ok := strings.CutSuffix(filename, ".html")
+		if !ok || userName == "404" {
+			ctx.Request.URL.Path = "/404.html"
+			ginServer.HandleContext(ctx)
+			ctx.Abort()
 			return
 		}
-		ctx.Request.URL.Path = "/404.html"
-		ginServer.HandleContext(ctx)
-	})
+		ctx.Set("userName", userName)
+	}, middleware.ValidatorSubscribe, controller.User.IndexApi.Subscribe)
 
 }

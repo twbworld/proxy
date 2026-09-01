@@ -6,8 +6,7 @@ import (
 	"github.com/twbworld/proxy/global"
 )
 
-// 流量上下行的记录清零
-func Clear() error {
+func (m *Manager) Clear() error {
 	err := dao.Tx(func(tx *sqlx.Tx) (e error) {
 		e = dao.App.UsersDb.UpdateUsersClear(tx)
 		return

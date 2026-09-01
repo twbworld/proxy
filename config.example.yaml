@@ -14,6 +14,8 @@ static_dir: static
 gin_log_path: log/gin.log
 # 运行日志文件
 run_log_path: log/run.log
+# 日志保留天数 (默认为7天, 0表示不清理)
+log_retention_days: 7
 # 时区
 tz: Asia/Shanghai
 # 客户端订阅配置
@@ -40,6 +42,17 @@ database:
   mysql_username: ""
   # mysql密码
   mysql_password: ""
+# Redis配置(目前用不上)
+redis:
+  addr: "127.0.0.1:6379"
+  password: ""
+  db: 0
+  # 分布式锁的过期时间(秒)
+  lock_expiry: 30
+  # 会话历史记录的过期时间(秒)
+  conversation_history_ttl: 3600
+  # 获取会话历史记录锁的过期时间(秒)
+  history_lock_expiry: 10
 # Telegram聊天室配置
 telegram:
   # 聊天室token(BotFather创建)

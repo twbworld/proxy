@@ -1,18 +1,18 @@
 package task
 
 import (
-	"sync"
+	"context"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model/db"
-	"github.com/twbworld/proxy/service"
+	"golang.org/x/sync/errgroup"
 )
 
-// 过期用户处理
-func Expiry() error {
+// Expiry 过期用户处理
+func (m *Manager) Expiry() error {
 	var users []db.Users
 
 	if err := dao.App.UsersDb.GetUsers(&users); err != nil {
@@ -20,7 +20,7 @@ func Expiry() error {
 		return err
 	}
 
-	if len(users) < 1 {
+	if len(users) == 0 {
 		global.Log.Infoln("没有过期用户[gsfiod]")
 		return nil
 	}
@@ -31,41 +31,44 @@ func Expiry() error {
 		global.Log.Errorf("时间出错[djaksofja]: %v", err)
 		return err
 	}
-	t1, t2 := now.AddDate(0, 0, -7), time.Now().In(time.UTC).AddDate(0, 0, -5)
 
-	ids := make([]uint, 0, len(users))
-	var wg sync.WaitGroup
+	t1, t2 := now.AddDate(0, 0, -7), now.AddDate(0, 0, -5)
+	var ids []uint
+	eg, _ := errgroup.WithContext(context.Background())
+
 	for _, user := range users {
-		if user.ExpiryDate == nil || *user.ExpiryDate == "" || user.Id < 1 {
+		if user.ExpiryDate == "" || user.Id < 1 {
 			continue
 		}
-		ti, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, time.UTC)
+		ti, err := time.ParseInLocation(time.DateOnly, user.ExpiryDate, time.UTC)
 		if err != nil {
 			continue
 		}
+
 		if t.After(ti) {
 			ids = append(ids, user.Id)
 		}
 
 		if t1.After(ti) && t2.Before(ti) {
-			wg.Go(func() {
+			userCopy := user // 避免迭代器变量捕获问题
+			eg.Go(func() error {
 				defer func() {
 					if r := recover(); r != nil {
 						global.Log.Errorf("TgSend协程发生Panic: %v", r)
 					}
 				}()
-				_ = service.Service.UserServiceGroup.TgService.TgSend(user.Username + "快到期" + ti.Format(time.DateOnly))
+				return global.Notifier.Send(userCopy.Username + "快到期" + ti.Format(time.DateOnly))
 			})
 		}
 	}
-	wg.Wait()
+	_ = eg.Wait()
 
 	if len(ids) == 0 {
 		global.Log.Infoln("没有过期用户[ofijsdfio]")
 		return nil
 	}
 
-	err = dao.Tx(func(tx *sqlx.Tx) (e error) {
+	err = dao.Tx(func(tx *sqlx.Tx) error {
 		return dao.App.UsersDb.UpdateUsersExpiry(ids, tx)
 	})
 

@@ -1,7 +1,11 @@
 package user
 
 type ServiceGroup struct {
-	Validator
-	BaseService
-	TgService
+	IndexService IndexService
+}
+
+func NewServiceGroup() ServiceGroup {
+	return ServiceGroup{
+		IndexService: NewIndexService(),
+	}
 }

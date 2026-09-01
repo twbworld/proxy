@@ -1,5 +1,5 @@
 ##编译
-FROM golang:1.26 AS builder
+FROM golang:1.27 AS builder
 WORKDIR /app
 ARG TARGETARCH
 ENV GO111MODULE=on
@@ -7,8 +7,10 @@ ENV GO111MODULE=on
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-#go-sqlite3需要cgo编译; 且使用完全静态编译, 否则需依赖外部安装的glibc
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -ldflags "-s -w --extldflags '-static -fpic'" -o server . && \
+#在编译阶段CI/CD中使用"git describe --tags --always"获取版本号并设置VERSION参数
+ARG VERSION="unknown"
+#chroma-go/go-sqlite3需要cgo编译; 且使用完全静态编译, 否则需依赖外部安装的glibc
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=$TARGETARCH go build -tags 'netgo osusergo' -ldflags "-s -w --extldflags '-static -fpic' -X 'github.com/twbworld/proxy/global.Version=${VERSION}'" -o server . && \
     mv config.example.yaml clash.yaml server /app/static
 
 

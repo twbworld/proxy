@@ -1,24 +1,16 @@
 package dao
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
-
-	"database/sql"
-	"github.com/twbworld/proxy/model/db"
+	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/twbworld/proxy/model/db"
 )
 
 type SystemInfoDb struct{}
-
-func (s *SystemInfoDb) GetSysValByKey(SystemInfo *db.SystemInfo, key string, tx ...*sqlx.Tx) error {
-	sql := fmt.Sprintf("SELECT * FROM `%s` WHERE `key` = ?", SystemInfo.TableName())
-	if len(tx) > 0 && tx[0] != nil {
-		return tx[0].Get(SystemInfo, sql, key)
-	}
-	return DB.Get(SystemInfo, sql, key)
-}
 
 func (s *SystemInfoDb) SaveSysVal(key, value string, tx *sqlx.Tx) (err error) {
 	if tx == nil {
@@ -31,27 +23,24 @@ func (s *SystemInfoDb) SaveSysVal(key, value string, tx *sqlx.Tx) (err error) {
 
 	tn := db.SystemInfo{}.TableName()
 
-	var sql string
+	var sqlStr string
 	if CanLock {
-		sql = fmt.Sprintf("SELECT `id` FROM `%s` WHERE `key`=? FOR UPDATE", tn)
-		if _, err = tx.Exec(sql, key); err != nil {
+		sqlStr = fmt.Sprintf("SELECT `id` FROM `%s` WHERE `key`=? FOR UPDATE", tn)
+		if _, err = tx.Exec(sqlStr, key); err != nil {
 			return fmt.Errorf("[fui6u]%s", err)
 		}
 	}
 
-	sql = fmt.Sprintf("UPDATE `%s` SET `value` = ?, `update_time` = CURRENT_TIMESTAMP WHERE `key` = ?", tn)
-	_, err = tx.Exec(sql, value, key)
+	sqlStr = fmt.Sprintf("UPDATE `%s` SET `value` = ?, `updated_at` = ? WHERE `key` = ?", tn)
+	_, err = tx.Exec(sqlStr, value, time.Now().Unix(), key)
 	return
 }
 
-func (s *SystemInfoDb) CheckSysVal(key string, tx *sqlx.Tx) (err error) {
-	var info db.SystemInfo
-	if s.GetSysValByKey(&info, key, tx) == sql.ErrNoRows {
-		sql, args := utils.getInsertSql(db.SystemInfo{}, map[string]any{
-			"key": key,
-		})
-		_, err = tx.Exec(sql, args...)
+func (s *SystemInfoDb) CheckSysVal(key string, tx *sqlx.Tx) error {
+	info := new(db.SystemInfo)
+	if App.GetByCol(info, "key", key, tx) == sql.ErrNoRows {
+		// 泛型方法自动推断出正确的表和结构
+		return App.Insert[db.SystemInfo](map[string]any{"key": key}, tx)
 	}
-
-	return
+	return nil
 }

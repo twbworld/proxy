@@ -1,20 +1,21 @@
 name: review
 on:
-  workflow_dispatch: #github页面手动触发
-  workflow_call: #允许其他workflow调用
+  workflow_dispatch:
+  workflow_call:
     secrets:
       CODACY_PROJECT_TOKEN:
-        description: 'CODACY用户凭证'
         required: true
 
 jobs:
-
   codacy-review:
-    runs-on: ubuntu-latest #虚拟环境(github提供)
+    runs-on: ubuntu-latest
     env:
       TZ: Asia/Shanghai
+    permissions: #上传 SARIF 报告给 Github，提供写入权限！
+      contents: read
+      security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # 运行Codacy,可使用.codacy.yml配置
       - name: Codacy Review
         uses: codacy/codacy-analysis-cli-action@master
@@ -27,8 +28,8 @@ jobs:
           gh-code-scanning-compat: true #兼容Github的报错等级
           verbose: true #列出详情
           max-allowed-issues: 2147483647 #允许最大的"问题数"
-      # 对接Github的Security菜单
+        # 对接Github的Security菜单
       - name: Upload-github-sarif-reporter
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: ../results.sarif

@@ -1,226 +1,144 @@
 package user
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model/config"
 	"github.com/twbworld/proxy/model/db"
 	"github.com/twbworld/proxy/utils"
 )
 
-func TestSetProtocol(t *testing.T) {
-	b := &BaseService{}
-	assert.IsType(t, &clash{}, b.SetProtocol("clash"))
-	assert.IsType(t, &v2ray{}, b.SetProtocol("v2ray"))
-	assert.IsType(t, &v2ray{}, b.SetProtocol("unknown"))
-}
+// initTestConfig 初始化单元测试所需的全局配置与环境
+func initTestConfig(t *testing.T) {
+	// 优先使用新标准库特性 t.TempDir() 自动管理测试生命周期内的临时目录与清理
+	clashPath := filepath.Join(t.TempDir(), "clash.yaml")
 
-func TestClashHandle(t *testing.T) {
-	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
-
-	user := &db.Users{
-		Quota:      -1,
-		ExpiryDate: new(time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly)),
+	// 构造测试用的 Clash 模板文件
+	clashTpl := "proxies:\n[proxies]\nproxy-groups:\n  - name: Auto\n    proxies: \n[proxies_name]"
+	if err := os.WriteFile(clashPath, []byte(clashTpl), 0644); err != nil {
+		t.Fatalf("初始化测试 clash 模板失败: %v", err)
 	}
 
-	proxy := config.Proxies{
-		Name:        "test_node",
-		Type:        "vless",
-		Server:      "1.1.1.1",
-		Port:        443,
-		Flow:        "xtls-rprx-vision",
-		Network:     "tcp",
-		RealityOpts: config.RealityOpts{PublicKey: "test_pbk", ShortId: "test_sid"},
-	}
-	global.Config.Proxies = []config.Proxies{proxy}
-	global.Config.ClashPath = "test_clash.yaml"
-
-	err := os.WriteFile(global.Config.ClashPath, []byte(`proxies: [proxies]
-proxy-groups:
-  - name: test
-    proxies: [proxies_name]
-  - name: test2
-    proxies: [proxies_name]`), 0644)
-	assert.NoError(t, err)
-	defer os.Remove(global.Config.ClashPath)
-
-	c := &clash{}
-	result := c.Handle(user)
-
-	assert.Contains(t, result, `proxies: ["test_node"]`)
-	assert.Contains(t, result, fmt.Sprintf(`"server":"%s"`, proxy.Server))
-	assert.Contains(t, result, fmt.Sprintf(`"flow":"%s"`, proxy.Flow))
-	assert.Contains(t, result, fmt.Sprintf(`"public-key":"%s"`, proxy.RealityOpts.PublicKey))
-	assert.Contains(t, result, fmt.Sprintf(`"short-id":"%s"`, proxy.RealityOpts.ShortId))
-	assert.Contains(t, result, "\n  - {")
-}
-
-func TestV2rayHandle(t *testing.T) {
-	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
-	ti := time.Now().In(time.UTC).AddDate(0, 1, 0).Format(time.DateOnly)
-
-	user := &db.Users{Quota: -1, ExpiryDate: &ti}
-	proxy := config.Proxies{
-		Type:       "vless",
-		Server:     "server1",
-		Port:       443,
-		Uuid:       "xxx",
-		Network:    "tcp",
-		Servername: "example.com",
-		Tls:        true,
-	}
-	global.Config.Proxies = []config.Proxies{proxy}
-
-	x := &v2ray{}
-	result := x.Handle(user)
-	decodedResult := utils.Base64Decode(result)
-
-	expectedPrefix := fmt.Sprintf("%s://%s@%s:%d?", proxy.Type, proxy.Uuid, proxy.Server, proxy.Port)
-	assert.Contains(t, decodedResult, expectedPrefix)
-	assert.Contains(t, decodedResult, "encryption=none")
-	assert.Contains(t, decodedResult, "security=tls")
-	assert.Contains(t, decodedResult, "sni=example.com")
-	assert.Contains(t, decodedResult, "type=tcp")
-	assert.Contains(t, decodedResult, "headerType=none")
-}
-
-func TestClashGetConfig(t *testing.T) {
-	c := &clash{}
-
-	// Case 1: VLESS Reality
-	proxyReality := config.Proxies{
-		Name:        "RealityNode",
-		Type:        "vless",
-		Network:     "tcp",
-		Flow:        "xtls-rprx-vision",
-		RealityOpts: config.RealityOpts{PublicKey: "pk"},
-		XhttpOpts:   config.XhttpOpts{Path: "/dirty-data"}, // 测试脏数据是否被成功抹除
-	}
-	resReality, nameReality := c.getConfig(&proxyReality)
-	assert.Equal(t, "RealityNode", nameReality)
-	assert.IsType(t, &config.Proxies{}, resReality)
-	// 断言：无关数据已被置为零值，以确保 omitzero 能生效
-	assert.Empty(t, resReality.(*config.Proxies).XhttpOpts.Path)
-
-	// Case 2: VLESS XHTTP
-	proxyXhttpBase := config.Proxies{
-		Name:    "XhttpNodeBase",
-		Type:    "vless",
-		Network: "xhttp",
-	}
-	resXhttpBase, nameXhttpBase := c.getConfig(&proxyXhttpBase)
-	assert.Equal(t, "XhttpNodeBase", nameXhttpBase)
-	assert.IsType(t, &config.Proxies{}, resXhttpBase)
-
-	// Case 3: VLESS TCP (Base)
-	proxyTcp := config.Proxies{
-		Name:    "TcpNode",
-		Type:    "vless",
-		Network: "tcp",
-	}
-	resTcp, nameTcp := c.getConfig(&proxyTcp)
-	assert.Equal(t, "TcpNode", nameTcp)
-	assert.IsType(t, &config.Proxies{}, resTcp)
-
-	// Case 4: XHTTP (Clash Meta 支持)
-	proxyXhttp := config.Proxies{
-		Name:    "XhttpNode",
-		Type:    "vless",
-		Network: "xhttp",
-		XhttpOpts: config.XhttpOpts{
-			Mode: "auto",
-			Path: "/xhttp",
-			DownloadSettings: &config.DownloadSettings{
-				Server: "1.1.1.1",
+	cfg := &config.Config{
+		ClashPath: clashPath,
+		Proxies: []config.Proxies{
+			{
+				Name:    "测试节点_TCP",
+				Type:    "vless",
+				Server:  "127.0.0.1",
+				Port:    443,
+				Uuid:    "mock-uuid-1",
+				Network: "tcp",
+				Root:    false,
+			},
+			{
+				Name:    "测试节点_Root",
+				Type:    "vless",
+				Server:  "127.0.0.2",
+				Port:    443,
+				Uuid:    "mock-uuid-root",
+				Network: "tcp",
+				Root:    true,
 			},
 		},
 	}
-	resXhttp, nameXhttp := c.getConfig(&proxyXhttp)
-	assert.Equal(t, "XhttpNode", nameXhttp)
-	assert.IsType(t, &config.Proxies{}, resXhttp)
+
+	// 利用底层实现的无锁原子替换加载配置，保障并发安全
+	global.InitConfig(cfg)
 }
 
-func TestV2rayGetConfig(t *testing.T) {
-	x := &v2ray{}
+func TestIndexService_Handle(t *testing.T) {
+	initTestConfig(t)
+	svc := NewIndexService()
 
-	// Case 1: Standard VLESS
-	proxy := config.Proxies{
-		Type:              "vless",
-		Server:            "server1",
-		Port:              443,
-		Uuid:              "uuid1",
-		ClientFingerprint: "chrome",
-		Name:              "test",
-		Network:           "tcp",
-	}
-	result := x.getConfig(&proxy)
-	assert.Contains(t, result, "vless://uuid1@server1:443")
-	assert.Contains(t, result, "fp=chrome")
-	assert.Contains(t, result, "#test")
+	now := time.Now().UTC()
+	futureDate := now.AddDate(1, 0, 0).Format(time.DateOnly)
+	pastDate := now.AddDate(-1, 0, 0).Format(time.DateOnly)
 
-	// Case 2: XHTTP with Extra and DownloadSettings params
-	extraData := map[string]any{
-		"xhttpSettings": map[string]any{"path": "/v7"},
-	}
-	proxyXhttp := config.Proxies{
-		Type:    "vless",
-		Server:  "server2",
-		Port:    443,
-		Uuid:    "uuid2",
-		Network: "xhttp",
-		XhttpOpts: config.XhttpOpts{
-			Mode:  "auto",
-			Path:  "/path",
-			Extra: extraData,
-			DownloadSettings: &config.DownloadSettings{
-				Server: "1.1.1.1",
-				Port:   443,
+	tests := []struct {
+		name        string
+		protocol    string
+		user        *db.Users
+		wantContain []string
+		isBase64    bool
+	}{
+		{
+			name:     "过期用户_Clash兜底订阅",
+			protocol: "clash",
+			user:     &db.Users{ExpiryDate: pastDate},
+			wantContain: []string{
+				"!!! 订阅已过期 !!!",
+				"!!!!!! 订阅已过期 !!!!!!",
 			},
+			isBase64: false,
+		},
+		{
+			name:     "过期用户_V2ray兜底订阅",
+			protocol: "v2ray",
+			user:     &db.Users{ExpiryDate: pastDate},
+			wantContain: []string{
+				"vless://0@cn.bing.com:80?type=tcp#!!! 订阅已过期 !!!",
+			},
+			isBase64: true,
+		},
+		{
+			name:     "普通有效用户_Clash订阅(过滤Root节点)",
+			protocol: "clash",
+			user:     &db.Users{Quota: 1024, ExpiryDate: futureDate},
+			wantContain: []string{
+				"测试节点_TCP",
+				"127.0.0.1",
+			},
+			isBase64: false,
+		},
+		{
+			name:     "无限流量有效用户_V2ray订阅(包含Root节点)",
+			protocol: "v2ray",
+			user:     &db.Users{Quota: -1, ExpiryDate: futureDate}, // -1 表示无限流量
+			wantContain: []string{
+				"mock-uuid-1@127.0.0.1:443",
+				"mock-uuid-root@127.0.0.2:443",
+			},
+			isBase64: true,
+		},
+		{
+			name:     "未知协议_回退为V2ray订阅",
+			protocol: "unknown",
+			user:     &db.Users{Quota: 1024, ExpiryDate: futureDate},
+			wantContain: []string{
+				"mock-uuid-1@127.0.0.1:443",
+			},
+			isBase64: true,
 		},
 	}
-	resultXhttp := x.getConfig(&proxyXhttp)
 
-	assert.Contains(t, resultXhttp, "type=xhttp")
-	assert.Contains(t, resultXhttp, "mode=auto")
-	assert.Contains(t, resultXhttp, "path=%2Fpath")
-	assert.Contains(t, resultXhttp, "host=server2")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := svc.Handle(tc.protocol, tc.user)
 
-	expectedExtraData := map[string]any{
-		"xhttpSettings": map[string]any{"path": "/v7"},
-		"downloadSettings": map[string]any{
-			"address":  "1.1.1.1",
-			"port":     443,
-			"network":  "xhttp",
-			"security": "tls",
-		},
+			if tc.isBase64 {
+				got = utils.Base64Decode(got)
+			}
+
+			// 核心逻辑断言
+			for _, want := range tc.wantContain {
+				if !strings.Contains(got, want) {
+					t.Errorf("协议[%s] 期望结果包含:\n%s\n实际返回:\n%s", tc.protocol, want, got)
+				}
+			}
+
+			// 边界测试：非无限流量的普通用户不能越权获取到 Root 节点信息
+			if tc.user.Quota != -1 && !tc.isBase64 {
+				if strings.Contains(got, "测试节点_Root") || strings.Contains(got, "mock-uuid-root") {
+					t.Errorf("严重错误: 普通用户不应该包含 Root 节点信息")
+				}
+			}
+		})
 	}
-	extraJson, _ := json.Marshal(expectedExtraData)
-	encodedExtra := url.QueryEscape(string(extraJson))
-	assert.Contains(t, resultXhttp, "&extra="+encodedExtra)
-}
-
-func TestCheckUser(t *testing.T) {
-	global.Tz, _ = time.LoadLocation("Asia/Shanghai")
-	ti := time.Now().In(time.UTC)
-	t1 := ti.AddDate(0, 1, 0).Format(time.DateOnly)
-	t2 := ti.AddDate(0, -1, 0).Format(time.DateOnly)
-
-	user := &db.Users{ExpiryDate: &t1}
-	assert.True(t, checkUser(user))
-
-	user.ExpiryDate = &t2
-	assert.False(t, checkUser(user))
-
-	user.ExpiryDate = new("")
-	assert.True(t, checkUser(user))
-
-	user.ExpiryDate = new("0")
-	assert.True(t, checkUser(user))
 }

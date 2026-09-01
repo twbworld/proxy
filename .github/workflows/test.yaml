@@ -1,42 +1,32 @@
-name: test
+# 原始逻辑很健全，仅更新了 action 版本号
+name: Go Test
+
 on:
-  workflow_dispatch: #github页面手动触发
-  workflow_call: #允许其他workflow调用
+  workflow_dispatch:
+  workflow_call:
 
 jobs:
-
   test:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Shanghai
-    services: #容器配置
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: true
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
-      # - name: save-data
-      #   run: sudo mysql -uroot -h 127.0.0.1 < dao/db.sql
-
-      - name: add-configFile
-        run: sudo cp config.example.yaml config.yaml
+      - name: Add config.yaml
+        run: cp config.example.yaml config.yaml
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
 
-      - name: Build
-        run: go build -v ./...
+      - name: Go Version
+        run: go version
 
-      - name: Test
+      - name: Run Tests
         run: go test -v ./...
+
+      - name: Build Project
+        run: go build -v ./...

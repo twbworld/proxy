@@ -1,11 +1,13 @@
 package service
 
-import "github.com/twbworld/proxy/service/user"
-import "github.com/twbworld/proxy/service/admin"
+import (
+	"github.com/twbworld/proxy/service/admin"
+	"github.com/twbworld/proxy/service/common"
+	"github.com/twbworld/proxy/service/user"
+)
 
-var Service = new(ServiceGroup)
-
-type ServiceGroup struct {
-	UserServiceGroup  user.ServiceGroup
-	AdminServiceGroup admin.ServiceGroup
-}
+var (
+	User   user.ServiceGroup
+	Admin  admin.ServiceGroup
+	Common common.ServiceGroup
+)

@@ -2,7 +2,7 @@ package user
 
 import (
 	"cmp"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"maps"
 	"net"
@@ -17,45 +17,63 @@ import (
 	"github.com/twbworld/proxy/utils"
 )
 
-type BaseService struct{}
-
-type v2ray struct{}
-type clash struct{}
-type class interface {
-	Handle(user *db.Users) string
+type IndexService interface {
+	Handle(protocol string, user *db.Users) string
 }
 
-func (b *BaseService) SetProtocol(t string) class {
-	switch t {
+type indexService struct{}
+
+type handler struct {
+	user *db.Users
+}
+
+func NewIndexService() IndexService {
+	return &indexService{}
+}
+
+func (s *indexService) Handle(protocol string, user *db.Users) string {
+	handler := new(handler{
+		user: user,
+	})
+
+	res := handler.generate(protocol)
+	if res == "" && protocol != "" {
+		res = handler.generate("")
+	}
+	return res
+}
+
+func (h *handler) generate(protocol string) string {
+	switch protocol {
 	case "clash":
-		return &clash{}
+		return h.buildClash()
 	default:
-		return &v2ray{}
+		return h.buildV2ray()
 	}
 }
 
-// Handle 处理 Clash/Mihomo 订阅
-func (c *clash) Handle(user *db.Users) string {
-	if !checkUser(user) {
+// buildClash 处理 Clash/Mihomo 订阅
+func (h *handler) buildClash() string {
+	if !h.checkUser() {
 		return `proxies:
   - {name: "!!! 订阅已过期 !!!", type: trojan, server: cn.bing.com, port: 80, password: 0, network: tcp}
 proxy-groups:
   - {name: "!!!!!! 订阅已过期 !!!!!!", type: select, proxies: ["!!! 订阅已过期 !!!"]}`
 	}
 
-	if len(global.Config.Proxies) < 1 || !utils.FileExist(global.Config.ClashPath) {
+	if len(global.Config().Proxies) < 1 || !utils.FileExist(global.Config().ClashPath) {
 		return ""
 	}
 
-	proxiesName := make([]string, 0, len(global.Config.Proxies))
+	proxiesName := make([]string, 0, len(global.Config().Proxies))
 	var proxiesBuilder strings.Builder
 
-	for _, value := range global.Config.Proxies {
-		if value.Server == "" || value.Type == "" || (value.Root && user.Quota != -1) {
+	for _, value := range global.Config().Proxies {
+		if value.Server == "" || value.Type == "" || (value.Root && h.user.Quota != -1) {
 			continue
 		}
 
-		proxyConfig, name := c.getConfig(&value)
+		proxyConfig, name := h.getClashConfig(&value)
 		if name == "" || proxyConfig == nil {
 			continue
 		}
@@ -79,7 +97,7 @@ proxy-groups:
 		return ""
 	}
 
-	tpl, err := os.ReadFile(global.Config.ClashPath)
+	tpl, err := os.ReadFile(global.Config().ClashPath)
 	if err != nil || len(tpl) < 1 {
 		return ""
 	}
@@ -92,22 +110,22 @@ proxy-groups:
 	return replacer.Replace(string(tpl))
 }
 
-// Handle 处理 v2rayN 订阅
-func (x *v2ray) Handle(user *db.Users) string {
-	if !checkUser(user) {
+// buildV2ray 处理 v2rayN 订阅
+func (h *handler) buildV2ray() string {
+	if !h.checkUser() {
 		return utils.Base64Encode("vless://0@cn.bing.com:80?type=tcp#!!! 订阅已过期 !!!")
 	}
 
-	if len(global.Config.Proxies) < 1 {
+	if len(global.Config().Proxies) < 1 {
 		return ""
 	}
 
 	var subscription strings.Builder
-	for _, value := range global.Config.Proxies {
-		if value.Server == "" || value.Type == "" || (value.Root && user.Quota != -1) {
+	for _, value := range global.Config().Proxies {
+		if value.Server == "" || value.Type == "" || (value.Root && h.user.Quota != -1) {
 			continue
 		}
-		if link := x.getConfig(&value); link != "" {
+		if link := h.getV2rayConfig(&value); link != "" {
 			subscription.WriteString(link)
 			subscription.WriteString("\n")
 		}
@@ -116,28 +134,23 @@ func (x *v2ray) Handle(user *db.Users) string {
 	return utils.Base64Encode(subscription.String())
 }
 
-// getConfig 生成 Clash 配置对象
-func (c *clash) getConfig(value *config.Proxies) (any, string) {
+// getClashConfig 生成 Clash 配置对象
+func (h *handler) getClashConfig(value *config.Proxies) (any, string) {
 	p := *value
 	p.SetProxyDefault()
 
-	// 允许 vless 下所有类型,包括支持最新的 xhttp
 	if p.Type != "vless" {
 		return nil, ""
 	}
 
-	// 根据 Network 和 Flow 判断具体类型
 	switch {
 	case p.Flow == "xtls-rprx-vision" && p.RealityOpts.PublicKey != "":
-		// VLESS Reality (TCP)
 		p.XhttpOpts = config.XhttpOpts{}
 		return &p, p.Name
 	case p.Network == "xhttp":
-		// VLESS XHTTP
 		p.RealityOpts = config.RealityOpts{}
 		return &p, p.Name
 	case p.Network == "tcp":
-		// VLESS TCP (TLS/Vision)
 		p.RealityOpts = config.RealityOpts{}
 		p.XhttpOpts = config.XhttpOpts{}
 		return &p, p.Name
@@ -146,8 +159,8 @@ func (c *clash) getConfig(value *config.Proxies) (any, string) {
 	}
 }
 
-// getConfig 生成 v2rayN 链接
-func (x *v2ray) getConfig(value *config.Proxies) string {
+// getV2rayConfig 生成 v2rayN 链接
+func (h *handler) getV2rayConfig(value *config.Proxies) string {
 	p := *value
 	p.SetProxyDefault()
 
@@ -160,50 +173,40 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 	link.WriteString("://")
 	link.WriteString(p.Uuid)
 	link.WriteString("@")
-	// JoinHostPort判断IPv6会加上[]
 	link.WriteString(net.JoinHostPort(strings.Trim(p.Server, "[]"), fmt.Sprint(p.Port)))
-
-	// 公共参数
 	link.WriteString("?encryption=none")
 
-	// Security
 	if p.RealityOpts.PublicKey != "" {
 		link.WriteString("&security=reality")
 	} else if p.Tls {
 		link.WriteString("&security=tls")
 	}
 
-	// Servername / SNI
 	if p.Servername != "" {
 		link.WriteString("&sni=")
 		link.WriteString(p.Servername)
 	}
 
-	// Fingerprint
 	if p.ClientFingerprint != "" {
 		link.WriteString("&fp=")
 		link.WriteString(p.ClientFingerprint)
 	}
 
-	// Flow (Vision)
 	if p.Flow != "" {
 		link.WriteString("&flow=")
 		link.WriteString(p.Flow)
 	}
 
-	// Network Type (只有 tcp, grpc, xhttp)
 	if p.Network != "" {
 		link.WriteString("&type=")
 		link.WriteString(p.Network)
 	}
 
-	// ALPN
 	if len(p.Alpn) > 0 {
 		link.WriteString("&alpn=")
 		link.WriteString(url.QueryEscape(strings.Join(p.Alpn, ",")))
 	}
 
-	// 协议特定参数
 	switch p.Network {
 	case "tcp":
 		link.WriteString("&headerType=none")
@@ -227,7 +230,6 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 			link.WriteString(url.QueryEscape(p.Servername))
 		}
 
-		// 汇总整合 Extra 和 DownloadSettings 给 v2ray 使用 (映射为规范驼峰)
 		extraMap := make(map[string]any, len(p.XhttpOpts.Extra)+1)
 		if len(p.XhttpOpts.Extra) > 0 {
 			maps.Copy(extraMap, p.XhttpOpts.Extra)
@@ -239,12 +241,9 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 			if ds.Server != "" {
 				v2rayDs["address"] = ds.Server
 			}
-
 			v2rayDs["port"] = cmp.Or(ds.Port, 443)
-
 			v2rayDs["network"] = "xhttp"
 
-			// 构建 xhttpSettings 层级
 			xhttpSet := make(map[string]any)
 			if ds.Path != "" {
 				xhttpSet["path"] = ds.Path
@@ -256,7 +255,6 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 				v2rayDs["xhttpSettings"] = xhttpSet
 			}
 
-			// 构建 realitySettings 或 tlsSettings 层级
 			if ds.RealityOpts.PublicKey != "" {
 				v2rayDs["security"] = "reality"
 				realitySet := map[string]any{
@@ -300,17 +298,14 @@ func (x *v2ray) getConfig(value *config.Proxies) string {
 
 	link.WriteString("#")
 	link.WriteString(url.QueryEscape(p.Name))
-
 	return link.String()
 }
 
-// 检测过期
-func checkUser(user *db.Users) bool {
-	if user.ExpiryDate == nil || *user.ExpiryDate == "" || *user.ExpiryDate == "0" {
+// checkUser 检测是否过期
+func (h *handler) checkUser() bool {
+	if h.user.ExpiryDate == "" || h.user.ExpiryDate == "0" {
 		return true
 	}
-
-	t, err := time.ParseInLocation(time.DateOnly, *user.ExpiryDate, time.UTC)
-
+	t, err := time.ParseInLocation(time.DateOnly, h.user.ExpiryDate, time.UTC)
 	return err != nil || t.AddDate(0, 0, 1).After(time.Now().In(time.UTC))
 }

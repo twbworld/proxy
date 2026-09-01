@@ -13,68 +13,81 @@
 
 1. 用户管理(增删改查)
     > 程序作为中间人, 通过与`telegram-bot`进行交互,实现对接用户数据库, 进行用户管理  
-    > 如喜欢用文件而不是`telegram-bot`进行用户管理, 请使用`v0`版本  
     > 如喜欢用shell进行用户管理, 建议出门左转使用[Jrohy/trojan](https://github.com/Jrohy/trojan)哟
 2. 程序返回客户端可识别的翻墙配置, 即订阅功能
     > 访问含用户名的特定订阅链接, 程序返回`v2ray`和`clash`等客户端可以识别的base64码或`clash`配置文件; 在客户端上配置订阅链接即可翻墙;
 
 ## 目录结构 : 
 ``` sh
-├── clash.yaml              #clash配置模板
-├── config.example.yaml     #以其为例, 自行创建config.yaml
-├── controller/
-│   ├── admin/              #后台api
-│   ├── enter.go
-│   └── user/               #前台api
-├── dao/                    #sql
-├── Dockerfile              #构建docker镜像
+├── clash.yaml              # Clash 配置模板
+├── config.example.yaml     # 配置文件示例 (复制为 config.yaml)
+├── controller/             # 控制器 (API 入口)
+│   ├── admin/
+│   │   └── bot.go
+│   ├── enter.go
+│   └── user/
+│       └── index.go
+├── dao/                    # 数据访问层 (SQL 操作)
+│   ├── common.go
+│   ├── enter.go
+│   ├── system_info.go
+│   └── users.go
+├── Dockerfile
 ├── .editorconfig
-├── .gitattributes
 ├── .github/
-│   └── workflows/          #存放GitHub-Actions的工作流文件
-├── .gitignore
-├── .gitmodules
-├── global/
-│   └── global.go           #全局变量的初始化
+│   └── workflows/
+├── global/                 # 全局变量与接口
+│   ├── global.go
+│   └── interface.go
 ├── go.mod
 ├── go.sum
-├── initialize/             #服务初始化相关
-│   ├── server.go           #gin服务
-│   ├── global/
-│   └── system/
-├── LICENSE
+├── initialize/             # 框架与各组件初始化
+│   ├── config.go
+│   ├── cron.go
+│   ├── enter.go
+│   ├── log.go
+│   ├── server.go           # Gin Web 服务
+│   └── services.go
+├── internal/               # 外部依赖解耦层 (用于随时无缝切换底层驱动)
+│   ├── mysql/              # MySQL 适配与 DDL
+│   ├── redis/              # Redis 适配与分布式锁
+│   ├── sqlite/             # SQLite 适配与 DDL
+│   └── telegram/           # Telegram Bot 通信驱动
 ├── log/
-│   ├── gin.log             #gin日志
-│   ├── .gitkeep
-│   └── run.log             #业务日志
-├── main.go                 #入口
-├── main_test.go            #测试
-├── middleware/             #路由中间件以及验参
-├── model/
-│   ├── common/             #业务要用的结构体
-│   ├── config/             #配置文件的结构体
-│   └── db/                 #数据库模型结构体
+│   └── .gitkeep
+├── main.go                 # 程序入口
+├── middleware/             # 路由中间件与验参
+│   ├── auth.go
+│   └── other.go
+├── model/                  # 结构体定义
+│   ├── common/
+│   ├── config/             # 配置文件结构体
+│   ├── db/                 # 数据库模型结构体
+│   └── enum/
 ├── README.md
-├── router/                 #gin路由
-├── service/
-│   └── user/
-│       ├── enter.go
-│       ├── index.go        #处理数据库的相关代码
-│       ├── tg.go           #与telegram-bot交互的逻辑
-│       └── validator.go
-├── static/                 #静态资源
-├── task/                   #任务
-│   ├── clear.go            #流量清零
-│   └── expiry.go           #过期用户处理
+├── router/
+│   └── router.go
+├── service/                # 核心业务逻辑
+│   ├── admin/
+│   │   └── bot.go          # TG Bot 业务逻辑
+│   ├── common/
+│   │   └── async.go
+│   ├── enter.go
+│   └── user/
+│       └── index.go
+├── static/                 # 静态资源
+├── task/                   # 后台定时任务
+│   ├── cleanup_logs.go     # 日志清理
+│   ├── clear.go            # 流量清零
+│   ├── enter.go
+│   └── expiry.go           # 过期用户处理
 └── utils/
-    └── tool.go
+    └── tool.go             # 通用工具函数
 ```
 
 ## 准备
-* 请准备数据库(默认使用sqlite, 没有db文件则自动在根目录下新增proxy.db文件, 数据库结构参考`initialize/system/db.go`), 并配置`config.yaml` db选项, 可用mysql, 甚至直接配置trojan-go的mysql数据库, 参考 `config.example.yaml`
+* 请准备数据库(默认使用sqlite, 没有db文件则自动在根目录下新增proxy.db文件, 数据库结构参考`initialize/system/db.go`), 并配置`config.yaml` database选项, 可用mysql,参考 `config.example.yaml`
 * 自行创建`telegram-bot`, 将token/id/domain信息配置到`config.yaml`, 可实现tg交互管理用户
-* 建议使用的xray很难做用户管理, 故项目不依赖其数据而是外置数据库, 缺点是不能利用xray的流量统计功能(使用trojan-go和其数据库, 则流量统计可用); 未来会对接xray数据, 也许吧!
-* 未来支持环境变量配置, 也许吧!
 
 ## 安装
 

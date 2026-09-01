@@ -4,14 +4,16 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"maps"
 	"math"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/twbworld/proxy/global"
+	"uuid"
 )
 
 type timeNumber interface {
@@ -33,12 +35,16 @@ func Base64Decode(str string) string {
 	return string(bstr)
 }
 func Hash(str string) string {
-	b := sha256.Sum224([]byte(str))
+	return HashBytes([]byte(str))
+}
+
+func HashBytes(data []byte) string {
+	b := sha256.Sum224(data)
 	return hex.EncodeToString(b[:])
 }
 
-func TimeFormat[T timeNumber](t T) string {
-	return time.Unix(int64(t), 0).In(global.Tz).Format(time.DateTime)
+func TimeFormat[T timeNumber](t T, loc *time.Location) string {
+	return time.Unix(int64(t), 0).In(loc).Format(time.DateTime)
 }
 
 // 四舍五入保留小数位
@@ -91,32 +97,27 @@ func CreateFile(path string) error {
 	return nil
 }
 
-// func ListToMap(list any, key string) map[string]any {
-// 	v := reflect.ValueOf(list)
-// 	if v.Kind() != reflect.Slice {
-// 		return nil
-// 	}
-
-// 	res := make(map[string]any, v.Len())
-// 	for i := 0; i < v.Len(); i++ {
-// 		item := v.Index(i).Interface()
-// 		itemValue := reflect.ValueOf(item)
-// 		keyValue := itemValue.FieldByName(key)
-// 		if keyValue.IsValid() && keyValue.Kind() == reflect.String {
-// 			res[keyValue.String()] = item
-// 		}
-// 	}
-
-//		return res
-//	}
-//
-// ListToMap 转换为map(使用泛型替代反射重构)
 // 类似php的array_column($a, null, 'key')
-func ListToMap[E any, K comparable](list []E, keyFunc func(E) K) map[K]E {
-	res := make(map[K]E, len(list))
-	for _, v := range list {
-		res[keyFunc(v)] = v
+func ListToMap(list any, key string) map[string]any {
+	v := reflect.ValueOf(list)
+	if v.Kind() != reflect.Slice {
+		return nil
 	}
+
+	res := make(map[string]any, v.Len())
+	for i := range v.Len() {
+		item := v.Index(i).Interface()
+		itemValue := reflect.ValueOf(item)
+		keyValue := itemValue.FieldByName(key)
+		if keyValue.IsValid() && keyValue.Kind() == reflect.String {
+			if strVal, ok := reflect.TypeAssert[string](keyValue); ok {
+				res[strVal] = item
+			} else {
+				res[keyValue.String()] = item
+			}
+		}
+	}
+
 	return res
 }
 
@@ -128,17 +129,57 @@ func ContainsAny(str string, substrs []string) bool {
 }
 
 // 取两个切片的交集
-func Union[T comparable](slice1, slice2 []T) []T {
-	set1 := make(map[T]struct{}, len(slice1))
+func Intersect[T string | Number](slice1, slice2 []T) []T {
+	// 创建一个空的哈希集合用于存储第一个切片的元素
+	set1 := make(map[T]struct{})
 	for _, elem := range slice1 {
 		set1[elem] = struct{}{}
 	}
 
-	var result []T
+	// 创建一个空的哈希集合用于存储交集
+	intersectionSet := make(map[T]struct{})
 	for _, elem := range slice2 {
 		if _, exists := set1[elem]; exists {
-			result = append(result, elem)
+			intersectionSet[elem] = struct{}{}
 		}
 	}
-	return slices.Clip(result)
+
+	return slices.Collect(maps.Keys(intersectionSet))
+}
+
+// 生成文件路径和文件名
+func ReadyFile(staticDir string, loc *time.Location, fileExt ...string) (string, string) {
+	ext := ""
+	if len(fileExt) > 0 {
+		ext = fileExt[0]
+	}
+
+	return filepath.Join(staticDir, time.Now().In(loc).Format("2006/01/")) + "/", uuid.NewV7().String()[:10] + ext
+}
+
+// GetTTLWithJitter 为缓存TTL增加随机抖动，防止缓存雪崩
+func GetTTLWithJitter(baseTTLInSeconds int64) time.Duration {
+	if baseTTLInSeconds <= 0 {
+		return 0
+	}
+	jitter := rand.Int64N(baseTTLInSeconds / 10)
+	return time.Duration(baseTTLInSeconds+jitter) * time.Second
+}
+
+// ParseDateFromLogFileName 从日志文件名中解析日期
+// 文件名格式如: gin.log.2025-10-28, run.log.2025-10-28
+func ParseDateFromLogFileName(filename string, loc *time.Location) (time.Time, bool) {
+	parts := strings.Split(filename, ".")
+	if len(parts) < 2 {
+		return time.Time{}, false
+	}
+
+	// 日期部分应在最后
+	dateStr := parts[len(parts)-1]
+	// 使用 "2006-01-02" 格式解析
+	t, err := time.ParseInLocation("2006-01-02", dateStr, loc)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
 }

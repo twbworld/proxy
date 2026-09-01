@@ -1,14 +1,13 @@
-package user
+package admin
 
 import (
 	"database/sql"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,76 +16,53 @@ import (
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model/db"
+	"github.com/twbworld/proxy/service/common"
 )
-
-type TgService struct{}
-
-type tgConfig struct {
-	update *tg.Update
-}
 
 var (
 	step3Regex    = regexp.MustCompile(`(.+)@(\d+)`)
 	step4Regex    = regexp.MustCompile(`(.+)@(\d+)@(.+)`)
 	userNameRegex = regexp.MustCompile("^[a-zA-Z0-9_-]{4,64}$")
-	lock          sync.RWMutex
 )
 
-// 安全启动协程，捕获 panic 防止主程序崩溃
-func safeGo(fn func()) {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				global.Log.Errorf("TG服务协程发生Panic: %v", r)
-			}
-		}()
-		fn()
-	}()
+type BotService interface {
+	Webhook(ctx *gin.Context) error
 }
 
-// 向Tg发送信息(请用协程执行)
-func (t *TgService) TgSend(text string) (err error) {
-	if global.Bot == nil {
-		return fmt.Errorf("[ertioj98]出错")
-	}
-
-	if len(text) < 1 {
-		return fmt.Errorf("[sioejn89]出错")
-	}
-
-	lock.RLock()
-	defer lock.RUnlock()
-
-	var str strings.Builder
-	str.WriteString(`[`)
-	str.WriteString(global.Config.ProjectName)
-	str.WriteString(`]`)
-	str.WriteString(text)
-
-	msg := tg.NewMessage(global.Config.Telegram.Id, str.String())
-	// msg.ParseMode = "MarkdownV2" //使用Markdown格式, 需要对特殊字符进行转义
-
-	_, err = global.Bot.Send(msg)
-	return
+type botService struct {
+	async    common.AsyncService
+	notifier global.NotifierService
 }
 
-func (t *TgService) Webhook(ctx *gin.Context) (err error) {
-	tc := &tgConfig{
-		update: &tg.Update{},
-	}
-
-	if err = json.NewDecoder(ctx.Request.Body).Decode(tc.update); err != nil {
-		return
-	}
-
-	return tc.handle()
+type handler struct {
+	notifier global.NotifierService
+	async    common.AsyncService
+	update   *tg.Update
 }
 
-func (c *tgConfig) handle() error {
+func NewBotService(async common.AsyncService, notifier global.NotifierService) BotService {
+	return &botService{
+		async:    async,
+		notifier: notifier,
+	}
+}
 
-	// st, _ := json.Marshal(update)
-	// fmt.Println(string(st))
+func (t *botService) Webhook(ctx *gin.Context) error {
+	update := new(tg.Update{})
+	if err := json.UnmarshalRead(ctx.Request.Body, update); err != nil {
+		return err
+	}
 
+	//为避免高并发的数据覆盖, 每个请求都构建新的handler
+	handler := new(handler{
+		update:   update,
+		async:    t.async,
+		notifier: t.notifier,
+	})
+	return handler.handle()
+}
+
+func (c *handler) handle() error {
 	if c.update.Message != nil {
 		// (对话第一步) 和 (对话第五步)
 		return c.firstStep()
@@ -118,28 +94,26 @@ func (c *tgConfig) handle() error {
 			// (对话第二步)
 			return c.selectUser()
 		}
-
 	}
 	return nil
 }
 
-func (c *tgConfig) firstStep() error {
+func (c *handler) firstStep() error {
 	msg := tg.NewMessage(c.update.Message.Chat.ID, "")
-	//ReplyKeyboard位于输入框下的按钮
+	// ReplyKeyboard位于输入框下的按钮
 	msg.Text, msg.ReplyMarkup = "命令不存在!!!", tg.NewReplyKeyboard(
 		tg.NewKeyboardButtonRow(
 			tg.NewKeyboardButton("/start"),
 		),
 	)
 
-	var info db.SystemInfo
-	errSys := dao.App.SystemInfoDb.GetSysValByKey(&info, strconv.FormatInt(c.update.Message.Chat.ID, 10)+"_step")
-
+	info := new(db.SystemInfo{})
+	errSys := dao.App.GetByCol(info, "key", strconv.FormatInt(c.update.Message.Chat.ID, 10)+"_step")
 	if c.update.Message.IsCommand() {
 		switch c.update.Message.Command() {
 		case "start", "help":
 			msg.Text = "\nHello " + c.update.Message.From.FirstName + c.update.Message.From.LastName
-			//InlineKeyboard位于对话框下的按钮
+			// InlineKeyboard位于对话框下的按钮
 			msg.ReplyMarkup = tg.NewInlineKeyboardMarkup(
 				tg.NewInlineKeyboardRow(
 					tg.NewInlineKeyboardButtonData("查询用户", "user_select"),
@@ -148,7 +122,7 @@ func (c *tgConfig) firstStep() error {
 			)
 
 			if errSys == nil || info.Value != "" {
-				//初始化,清空流程码
+				// 初始化,清空流程码
 				err := dao.Tx(func(tx *sqlx.Tx) (e error) {
 					return dao.App.SystemInfoDb.SaveSysVal(strconv.FormatInt(c.update.Message.Chat.ID, 10)+"_step", "", tx)
 				})
@@ -156,7 +130,6 @@ func (c *tgConfig) firstStep() error {
 					return err
 				}
 			}
-
 		default:
 			msg.ReplyToMessageID = c.update.Message.MessageID //引用对话
 		}
@@ -165,34 +138,31 @@ func (c *tgConfig) firstStep() error {
 
 		if errSys != nil {
 			goto SEND
-		} else if t, err := time.ParseInLocation(time.DateTime, info.UpdateTime, time.UTC); err != nil || time.Now().Unix()-t.Unix() > dao.SysTimeOut {
-			if err != nil {
-				return errors.New("系统错误[adfaio]" + err.Error())
+		} else if t := time.Now().Unix() - info.UpdatedAt; t < 0 || info.UpdatedAt == 0 || t > dao.SysTimeOut {
+			if t < 0 || info.UpdatedAt == 0 {
+				return fmt.Errorf("系统错误[adfaio]%d", info.UpdatedAt)
 			}
-
-			//数据过期
-			(&TgService{}).TgSend(`输入超时, 请按"/start"重新设置:`)
+			c.notifier.Send(`输入超时, 请按"/start"重新设置:`)
 			return nil
 		}
 
 		if info.Value == "user_insert" {
-			return c.userInsert(&info)
+			return c.userInsert(info)
 		}
 
 		params := step4Regex.FindStringSubmatch(info.Value)
 		if len(params) < 4 {
 			return errors.New("参数错误[fijsa]")
 		}
-
 		params = params[:4]
 
 		intNum, err := strconv.Atoi(params[2])
 		if err != nil {
 			return errors.New("错误[jklsd]: " + err.Error())
 		}
-		var user db.Users
-		if err = dao.App.UsersDb.GetUsersByUserId(&user, uint(intNum)); err != nil {
-			if err == sql.ErrNoRows {
+		user := new(db.Users{})
+		if err = dao.App.GetByCol(user, "id", uint(intNum)); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
 				return errors.New("用户不存在[tigfffhh]")
 			}
 			return errors.New("错误[tigfhh]: " + err.Error())
@@ -206,7 +176,6 @@ func (c *tgConfig) firstStep() error {
 				msg.ParseMode = "MarkdownV2"
 
 				err := dao.Tx(func(tx *sqlx.Tx) (e error) {
-					//为了更新时间字段update_time
 					return dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, tx)
 				})
 				if err != nil {
@@ -224,7 +193,6 @@ func (c *tgConfig) firstStep() error {
 				msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的到期时间, 格式为\"2066\\-06\\-06\"", user.Username)
 				msg.ParseMode = "MarkdownV2"
 				err := dao.Tx(func(tx *sqlx.Tx) (e error) {
-					//为了更新时间字段update_time
 					return dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, tx)
 				})
 				if err != nil {
@@ -232,23 +200,23 @@ func (c *tgConfig) firstStep() error {
 				}
 				goto SEND
 			}
-			user.ExpiryDate = new(t.In(time.UTC).Format(time.DateOnly))
+			user.ExpiryDate = t.In(time.UTC).Format(time.DateOnly)
 		default:
 			return errors.New("错误[kdfhf]: " + params[3])
 		}
 
 		err = dao.Tx(func(tx *sqlx.Tx) (e error) {
-			if e = dao.App.UsersDb.UpdateUsers(&user, tx); e != nil {
+			if e = dao.App.UsersDb.UpdateUsers(user, tx); e != nil {
 				return errors.New("错误[jkljkjkl]: " + e.Error())
 			}
-			//修改成功后,清空流程码
+			// 修改成功后,清空流程码
 			return dao.App.SystemInfoDb.SaveSysVal(info.Key, "", tx)
 		})
 		if err != nil {
 			return err
 		}
 
-		msg.Text = "*修改成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(&user)
+		msg.Text = "*修改成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(user)
 		msg.ReplyMarkup = tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
 				tg.NewInlineKeyboardButtonData("修改此用户["+user.Username+"]", fmt.Sprintf("user_update@%d", user.Id)),
@@ -257,15 +225,15 @@ func (c *tgConfig) firstStep() error {
 		msg.ParseMode = "MarkdownV2"
 	}
 SEND:
-	safeGo(func() {
-		if _, err := global.Bot.Send(msg); err != nil {
+	c.async.GoSafe(func() {
+		if err := c.notifier.SendRaw(msg); err != nil {
 			global.Log.Error(err)
 		}
 	})
 	return nil
 }
 
-func (c *tgConfig) selectUser() error {
+func (c *handler) selectUser() error {
 	var err error
 	switch c.update.CallbackQuery.Data {
 	case "user_select":
@@ -277,7 +245,6 @@ func (c *tgConfig) selectUser() error {
 		for _, v := range usersMysql {
 			row = append(row, tg.NewInlineKeyboardButtonData(v.Username, c.update.CallbackQuery.Data+"@"+strconv.Itoa(int(v.Id))))
 			if len(row) == 2 {
-				//每行两个进行展示
 				mkrow = append(mkrow, tg.NewInlineKeyboardRow(row...))
 				row = make([]tg.InlineKeyboardButton, 0, 2)
 			}
@@ -289,8 +256,8 @@ func (c *tgConfig) selectUser() error {
 		msg := tg.NewEditMessageTextAndMarkup(c.update.CallbackQuery.Message.Chat.ID, c.update.CallbackQuery.Message.MessageID, "选择*查询*的用户", tg.NewInlineKeyboardMarkup(mkrow...))
 		msg.ParseMode = "MarkdownV2"
 
-		safeGo(func() {
-			if _, err := global.Bot.Send(msg); err != nil {
+		c.async.GoSafe(func() {
+			if err := c.notifier.SendRaw(msg); err != nil {
 				global.Log.Error("错误[iofgjiosj]" + err.Error())
 			}
 		})
@@ -306,17 +273,17 @@ func (c *tgConfig) selectUser() error {
 		msg2 := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "请输入用户名称, 4\\-64个字符以内的英文/数字/符号\n例:`210606_abc`")
 		msg2.ParseMode = "MarkdownV2"
 
-		safeGo(func() {
-			if _, err := global.Bot.Send(msg2); err != nil {
-				global.Log.Error("错误[iofgjfiosj]" + err.Error())
+		c.async.GoSafe(func() {
+			if err := c.notifier.SendRaw(msg2); err != nil {
+				global.Log.Error("错误[iosdgiosj]" + err.Error())
 			}
 		})
 
 	default:
 		msg3 := tg.NewMessage(c.update.CallbackQuery.Message.Chat.ID, "命令不存在!!!")
-		safeGo(func() {
-			if _, err := global.Bot.Send(msg3); err != nil {
-				global.Log.Error("错误[iofgsjiosj]" + err.Error())
+		c.async.GoSafe(func() {
+			if err := c.notifier.SendRaw(msg3); err != nil {
+				global.Log.Error("错误[idgfbiosj]" + err.Error())
 			}
 		})
 	}
@@ -324,17 +291,16 @@ func (c *tgConfig) selectUser() error {
 	return nil
 }
 
-func (c *tgConfig) actionType(act string, userId uint) error {
-	var (
-		user db.Users
-		err  error
-	)
-	if err = dao.App.UsersDb.GetUsersByUserId(&user, userId); err != nil {
-		(&TgService{}).TgSend("找不到用户")
+func (c *handler) actionType(act string, userId uint) error {
+	var err error
+	user := new(db.Users)
+	if err = dao.App.GetByCol(user, "id", userId); err != nil {
+		// 调用通用接口通知
+		c.notifier.Send("找不到用户")
 		return errors.New("错误[jfdsgsd]" + err.Error())
 	}
 
-	msg := tg.NewEditMessageTextAndMarkup(c.update.CallbackQuery.Message.Chat.ID, c.update.CallbackQuery.Message.MessageID, c.getUserMarkdownV2Text(&user), tg.NewInlineKeyboardMarkup([]tg.InlineKeyboardButton{}))
+	msg := tg.NewEditMessageTextAndMarkup(c.update.CallbackQuery.Message.Chat.ID, c.update.CallbackQuery.Message.MessageID, c.getUserMarkdownV2Text(user), tg.NewInlineKeyboardMarkup([]tg.InlineKeyboardButton{}))
 	msg.ParseMode = "MarkdownV2"
 
 	switch act {
@@ -348,29 +314,29 @@ func (c *tgConfig) actionType(act string, userId uint) error {
 	case "user_update":
 		msg.ReplyMarkup = new(tg.NewInlineKeyboardMarkup(
 			tg.NewInlineKeyboardRow(
-				// tg.NewInlineKeyboardButtonData("限流", fmt.Sprintf("user_update@%d@%s", user.Id, "quota")),
 				tg.NewInlineKeyboardButtonData("到期", fmt.Sprintf("user_update@%d@%s", user.Id, "expiryDate")),
 			),
 		))
 		msg.Text = fmt.Sprintf("选择修改\\[`%s`\\]的设置\n", user.Username) + msg.Text
 		goto SEND3
 	default:
-		return (&TgService{}).TgSend("参数错误[goidjgd]")
+		c.notifier.Send("参数错误[goidjgd]")
+		return nil
 	}
 
 SEND3:
-	safeGo(func() {
-		if _, err := global.Bot.Send(msg); err != nil {
-			global.Log.Error(err)
+	c.async.GoSafe(func() {
+		if err := c.notifier.SendRaw(msg); err != nil {
+			global.Log.Error("错误[isefjiosj]" + err.Error())
 		}
 	})
 	return nil
 }
 
-func (c *tgConfig) input(userId uint, value string) error {
-	var user db.Users
-	if dao.App.UsersDb.GetUsersByUserId(&user, userId) != nil {
-		(&TgService{}).TgSend("找不到用户")
+func (c *handler) input(userId uint, value string) error {
+	user := new(db.Users)
+	if dao.App.GetByCol(user, "id", userId) != nil {
+		c.notifier.Send("找不到用户")
 		return errors.New("找不到用户[kysafd]")
 	}
 
@@ -379,16 +345,16 @@ func (c *tgConfig) input(userId uint, value string) error {
 
 	switch value {
 	case "quota":
-		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的流量数值, 单位为*G*; 如想限制该用户为2\\.3G流量,则输入\"2\\.3\", 不限则输入\"\\-1\"\n", user.Username) + c.getUserMarkdownV2Text(&user)
+		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的流量数值, 单位为*G*; 如想限制该用户为2\\.3G流量,则输入\"2\\.3\", 不限则输入\"\\-1\"\n", user.Username) + c.getUserMarkdownV2Text(user)
 	case "expiryDate":
-		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的到期时间, 格式为\"2066\\-06\\-06\"\n", user.Username) + c.getUserMarkdownV2Text(&user)
+		msg.Text = fmt.Sprintf("请输入限制\\[`%s`\\]的到期时间, 格式为\"2066\\-06\\-06\"\n", user.Username) + c.getUserMarkdownV2Text(user)
 	default:
 		msg.Text = "命令不存在!!!"
 	}
 
-	safeGo(func() {
-		if _, err := global.Bot.Send(msg); err != nil {
-			global.Log.Error("错误[iodiosj]" + err.Error())
+	c.async.GoSafe(func() {
+		if err := c.notifier.SendRaw(msg); err != nil {
+			global.Log.Error("错误[ser]" + err.Error())
 		}
 	})
 
@@ -397,51 +363,69 @@ func (c *tgConfig) input(userId uint, value string) error {
 	})
 }
 
-func (c *tgConfig) userInsert(info *db.SystemInfo) (err error) {
+func (c *handler) userInsert(info *db.SystemInfo) (err error) {
 	msg := tg.NewMessage(c.update.Message.Chat.ID, "")
 	msg.ReplyToMessageID = c.update.Message.MessageID //引用对话
 
-	var user db.Users
+	user := new(db.Users{})
+	// 1. 用户名格式不合法：刷新会话时间，提示重试
 	if !userNameRegex.MatchString(c.update.Message.Text) {
 		msg.Text = "请输入用户名称, 64个字符以内的英文/数字/字符\n例:`210606_abc`"
 		msg.ParseMode = "MarkdownV2"
 
-		go dao.Tx(func(tx *sqlx.Tx) (e error) {
-			return dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, tx)
+		c.async.GoSafe(func() {
+			_ = dao.Tx(func(tx *sqlx.Tx) (e error) {
+				return dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, tx)
+			})
 		})
-
 		goto SEND2
 	}
 
-	if dao.App.UsersDb.GetUsersByUserName(&user, c.update.Message.Text) == nil {
-		msg.Text = strings.Replace(fmt.Sprintf("*用户`%s`已存在\\!\\!\\!*\n", c.update.Message.Text), `-`, `\-`, -1) + c.getUserMarkdownV2Text(&user)
+	// 2. 用户名已存在：刷新会话时间，展示已有用户信息
+	if dao.App.GetByCol(user, "username", c.update.Message.Text) == nil {
+		msg.Text = strings.Replace(fmt.Sprintf("*用户`%s`已存在\\!\\!\\!*\n", c.update.Message.Text), `-`, `\-`, -1) + c.getUserMarkdownV2Text(user)
 		msg.ParseMode = "MarkdownV2"
 
-		go dao.Tx(func(tx *sqlx.Tx) (e error) {
-			return dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, tx)
+		c.async.GoSafe(func() {
+			_ = dao.Tx(func(tx *sqlx.Tx) (e error) {
+				return dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, tx)
+			})
 		})
-
 		goto SEND2
 	}
 
+	// 3. 执行核心原子事务：创建用户 -> 查询新建用户 -> 清空流程状态码
 	err = dao.Tx(func(tx *sqlx.Tx) (e error) {
+		// 插入新用户
 		if e = dao.App.UsersDb.InsertEmptyUsers(c.update.Message.Text, tx); e != nil {
-			msg.Text = `系统错误, 请按"/start"重新设置4`
-			go dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, tx)
-			return e
+			return fmt.Errorf("插入用户失败[iosdhja]: %w", e)
 		}
-		if e = dao.App.UsersDb.GetUsersByUserName(&user, c.update.Message.Text, tx); e != nil {
-			msg.Text = `系统错误, 请按"/start"重新设置5`
-			go dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, tx)
-			return e
+		// 获取新建的用户信息
+		if e = dao.App.GetByCol(user, "username", c.update.Message.Text, tx); e != nil {
+			return fmt.Errorf("获取新建用户失败: %w", e)
 		}
-		return e
+		// 新增成功后，在当前事务内直接清空步骤状态码
+		if e = dao.App.SystemInfoDb.SaveSysVal(info.Key, "", tx); e != nil {
+			return fmt.Errorf("清空流程状态失败: %w", e)
+		}
+		return nil
 	})
+	// 4. 事务失败时的容错处理
 	if err != nil {
+		global.Log.Errorf("创建用户事务失败[userInsert]: %v", err)
+		msg.Text = `系统错误, 请按"/start"重新设置`
+
+		// 事务已完全回滚，如果需要保留并刷新步骤状态，使用全新的独立事务处理
+		c.async.GoSafe(func() {
+			_ = dao.Tx(func(newTx *sqlx.Tx) error {
+				return dao.App.SystemInfoDb.SaveSysVal(info.Key, info.Value, newTx)
+			})
+		})
 		goto SEND2
 	}
 
-	msg.Text = "*新增成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(&user)
+	// 5. 成功后构建响应内容与操作菜单
+	msg.Text = "*新增成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(user)
 	msg.ParseMode = "MarkdownV2"
 	msg.ReplyMarkup = tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
@@ -450,25 +434,19 @@ func (c *tgConfig) userInsert(info *db.SystemInfo) (err error) {
 	)
 
 SEND2:
-	safeGo(func() {
-		if _, err := global.Bot.Send(msg); err != nil {
-			global.Log.Error(err)
+	c.async.GoSafe(func() {
+		if err := c.notifier.SendRaw(msg); err != nil {
+			global.Log.Error("错误[iofgjijghj]" + err.Error())
 		}
 	})
 	return nil
 }
 
-func (c *tgConfig) getUserMarkdownV2Text(user *db.Users) string {
-	// quota := "不限"
-	// if user.Quota != -1 {
-	// 	quota = fmt.Sprintf("%.1f", float64(user.Quota)/dao.App.UsersDb.QuotaMax) + "G"
-	// }
-	// download := fmt.Sprintf("%.1f", float64(user.Download)/dao.App.UsersDb.QuotaMax)
-	// upload := fmt.Sprintf("%.1f", float64(user.Upload)/dao.App.UsersDb.QuotaMax)
-	ExpiryDateStr := *user.ExpiryDate
-	if t, err := time.Parse(time.DateOnly, *user.ExpiryDate); err != nil {
-		ExpiryDateStr = t.In(global.Tz).Format(time.DateOnly)
+func (c *handler) getUserMarkdownV2Text(user *db.Users) string {
+	expiryDateStr := user.ExpiryDate
+	if t, err := time.Parse(time.DateOnly, user.ExpiryDate); err == nil {
+		expiryDateStr = t.In(global.Tz).Format(time.DateOnly)
 	}
-	text := fmt.Sprintf("账号: `%s`\nid: %d\n到期: %s", user.Username, user.Id, ExpiryDateStr)
+	text := fmt.Sprintf("账号: `%s`\nid: %d\n到期: %s", user.Username, user.Id, expiryDateStr)
 	return strings.Replace(strings.Replace(text, `-`, `\-`, -1), `.`, `\.`, -1)
 }
