@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -29,7 +30,9 @@ func main() {
 		}
 	}()
 
-	if err := initSvc.Run(); err != nil {
+	initCtx, cancelInit := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelInit()
+	if err := initSvc.Run(initCtx); err != nil {
 		global.Log.Fatalf("关键服务初始化失败，程序终止: %v", err)
 	}
 	defer initSvc.Close()
@@ -46,12 +49,15 @@ func main() {
 
 func dispatchAction(action string, taskManager *task.Manager) {
 	global.Log.Infof("开始执行后台任务: %s", action)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
+	defer cancel()
+
 	var err error
 	switch action {
 	case "clear":
-		err = taskManager.Clear()
+		err = taskManager.Clear(ctx)
 	case "expiry":
-		err = taskManager.Expiry()
+		err = taskManager.Expiry(ctx)
 	default:
 		fmt.Println("未知的任务参数, 可选值: clear|expiry")
 		return

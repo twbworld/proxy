@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json/v2"
 	"errors"
@@ -48,17 +49,17 @@ func NewBotService(async common.AsyncService, notifier global.NotifierService) B
 }
 
 func (t *botService) Webhook(ctx *gin.Context) error {
-	update := new(tg.Update{})
+	update := new(tg.Update)
 	if err := json.UnmarshalRead(ctx.Request.Body, update); err != nil {
 		return err
 	}
 
 	//为避免高并发的数据覆盖, 每个请求都构建新的handler
-	handler := new(handler{
+	handler := &handler{
 		update:   update,
 		async:    t.async,
 		notifier: t.notifier,
-	})
+	}
 	return handler.handle()
 }
 
@@ -107,7 +108,7 @@ func (c *handler) firstStep() error {
 		),
 	)
 
-	info := new(db.SystemInfo{})
+	info := new(db.SystemInfo)
 	errSys := dao.App.GetByCol(info, "key", strconv.FormatInt(c.update.Message.Chat.ID, 10)+"_step")
 	if c.update.Message.IsCommand() {
 		switch c.update.Message.Command() {
@@ -160,7 +161,7 @@ func (c *handler) firstStep() error {
 		if err != nil {
 			return errors.New("错误[jklsd]: " + err.Error())
 		}
-		user := new(db.Users{})
+		user := new(db.Users)
 		if err = dao.App.GetByCol(user, "id", uint(intNum)); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return errors.New("用户不存在[tigfffhh]")
@@ -367,7 +368,7 @@ func (c *handler) userInsert(info *db.SystemInfo) (err error) {
 	msg := tg.NewMessage(c.update.Message.Chat.ID, "")
 	msg.ReplyToMessageID = c.update.Message.MessageID //引用对话
 
-	user := new(db.Users{})
+	user := new(db.Users)
 	// 1. 用户名格式不合法：刷新会话时间，提示重试
 	if !userNameRegex.MatchString(c.update.Message.Text) {
 		msg.Text = "请输入用户名称, 64个字符以内的英文/数字/字符\n例:`210606_abc`"

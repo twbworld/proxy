@@ -91,7 +91,9 @@ func New(taskManager *task.Manager) *Initializer {
 			global.InitConfig(tmpConfig)
 
 			// 热重载
-			i.HandleConfigChange(oldConfig, tmpConfig)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			i.HandleConfigChange(ctx, oldConfig, tmpConfig)
 		})
 	})
 
@@ -99,7 +101,7 @@ func New(taskManager *task.Manager) *Initializer {
 }
 
 // HandleConfigChange 配置热重载
-func (i *Initializer) HandleConfigChange(oldConfig, newConfig *config.Config) {
+func (i *Initializer) HandleConfigChange(ctx context.Context, oldConfig, newConfig *config.Config) {
 	i.reloadLock.Lock()
 	defer i.reloadLock.Unlock()
 
@@ -117,7 +119,7 @@ func (i *Initializer) HandleConfigChange(oldConfig, newConfig *config.Config) {
 	}
 
 	//并发执行可安全热重载的任务
-	eg, _ := errgroup.WithContext(context.Background())
+	eg, egCtx := errgroup.WithContext(ctx)
 
 	// 时区重载
 	if oldConfig.Tz != newConfig.Tz {
@@ -126,21 +128,23 @@ func (i *Initializer) HandleConfigChange(oldConfig, newConfig *config.Config) {
 				global.Log.Errorf("热重载时区失败: %v", err)
 				return err
 			}
+			global.Log.Info("热重载时区成功")
 			return nil
 		})
 	}
-	// Redis客户端重载
+
 	if !reflect.DeepEqual(oldConfig.Redis, newConfig.Redis) {
 		eg.Go(func() error {
 			_ = i.redisClose()
-			if err := i.initRedis(); err != nil {
+			if err := i.initRedis(egCtx); err != nil {
 				global.Log.Errorf("热重载Redis客户端失败: %v", err)
 				return err
 			}
+			global.Log.Info("热重载Redis客户端成功")
 			return nil
 		})
 	}
-	// 数据库客户端重载
+
 	if !reflect.DeepEqual(oldConfig.Database, newConfig.Database) {
 		eg.Go(func() error {
 			_ = i.dbClose()
@@ -148,10 +152,11 @@ func (i *Initializer) HandleConfigChange(oldConfig, newConfig *config.Config) {
 				global.Log.Errorf("热重载数据库客户端失败: %v", err)
 				return err
 			}
+			global.Log.Info("热重载数据库客户端成功")
 			return nil
 		})
 	}
-	// 消息客户端重载
+
 	if !reflect.DeepEqual(oldConfig.Telegram, newConfig.Telegram) {
 		eg.Go(func() error {
 			_ = i.notifyClose()
@@ -159,6 +164,7 @@ func (i *Initializer) HandleConfigChange(oldConfig, newConfig *config.Config) {
 				global.Log.Errorf("热重载消息客户端失败: %v", err)
 				return err
 			}
+			global.Log.Info("热重载消息客户端成功")
 			return nil
 		})
 	}

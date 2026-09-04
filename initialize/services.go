@@ -1,6 +1,7 @@
 package initialize
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -34,8 +35,7 @@ func (i *Initializer) initNotify() error {
 	}, global.Log)
 	if err != nil {
 		global.Notifier = telegram.NewNoopClient(global.Log)
-		global.Log.Warnf("初始化通知服务失败，降级为空操作模式: %v", err)
-		return nil
+		return fmt.Errorf("通知服务降级为空操作模式: %w", err)
 	}
 
 	global.Notifier = client
@@ -48,18 +48,18 @@ func (i *Initializer) notifyClose() error {
 }
 
 // initRedis 初始化Redis客户端
-func (i *Initializer) initRedis() error {
+func (i *Initializer) initRedis(ctx context.Context) error {
 	client, err := redis.NewClient(
+		ctx,
 		global.Config().Redis.Addr,
 		global.Config().Redis.Password,
 		int(global.Config().Redis.DB),
 		global.Log,
 	)
 	if err != nil {
-		return fmt.Errorf("初始化Redis客户端失败: %w", err)
+		return fmt.Errorf("连接Redis异常: %w", err)
 	}
 	global.RedisClient = client
-	global.Log.Info("初始化Redis服务成功")
 	return nil
 }
 

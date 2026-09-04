@@ -1,19 +1,21 @@
 package task
 
 import (
+	"context"
 	"fmt"
-	"github.com/twbworld/proxy/utils"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/twbworld/proxy/utils"
+
 	"github.com/twbworld/proxy/global"
 )
 
 // 清除日志文件
-func (m *Manager) CleanUpLogs() error {
+func (m *Manager) CleanUpLogs(ctx context.Context) error {
 	retentionDays := global.Config().LogRetentionDays
 	if retentionDays == 0 {
 		global.Log.Info("日志清理功能已禁用 (log_retention_days = 0)")
@@ -36,6 +38,9 @@ func (m *Manager) CleanUpLogs() error {
 	err := filepath.WalkDir(logDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
 		if d.IsDir() {
 			return nil

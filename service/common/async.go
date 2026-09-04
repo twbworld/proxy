@@ -14,7 +14,7 @@ type asyncService struct {
 }
 
 func NewAsyncService() AsyncService {
-	return new(asyncService{})
+	return new(asyncService)
 }
 
 // GoSafe 安全地开启异步协程，内置 panic 恢复与全局日志记录

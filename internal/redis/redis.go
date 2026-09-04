@@ -18,7 +18,7 @@ type Client struct {
 }
 
 // NewClient 创建一个新的Redis客户端实例
-func NewClient(addr, password string, db int, log *logrus.Logger) (*Client, error) {
+func NewClient(ctx context.Context, addr, password string, db int, log *logrus.Logger) (*Client, error) {
 	if addr == "" {
 		log.Warnln("redis服务未启动: 配置为空")
 		return nil, fmt.Errorf("redis配置为空")
@@ -35,10 +35,10 @@ func NewClient(addr, password string, db int, log *logrus.Logger) (*Client, erro
 		PoolSize: 10, // 连接池大小
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if _, err := rdb.Ping(ctx).Result(); err != nil {
+	if _, err := rdb.Ping(pingCtx).Result(); err != nil {
 		if netErr, ok := errors.AsType[*net.OpError](err); ok {
 			return nil, fmt.Errorf("连接Redis网络异常: %v", netErr.Error())
 		}

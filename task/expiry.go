@@ -12,7 +12,7 @@ import (
 )
 
 // Expiry 过期用户处理
-func (m *Manager) Expiry() error {
+func (m *Manager) Expiry(ctx context.Context) error {
 	var users []db.Users
 
 	if err := dao.App.UsersDb.GetUsers(&users); err != nil {
@@ -34,7 +34,7 @@ func (m *Manager) Expiry() error {
 
 	t1, t2 := now.AddDate(0, 0, -7), now.AddDate(0, 0, -5)
 	var ids []uint
-	eg, _ := errgroup.WithContext(context.Background())
+	eg, egCtx := errgroup.WithContext(ctx)
 
 	for _, user := range users {
 		if user.ExpiryDate == "" || user.Id < 1 {
@@ -57,7 +57,13 @@ func (m *Manager) Expiry() error {
 						global.Log.Errorf("TgSend协程发生Panic: %v", r)
 					}
 				}()
-				return global.Notifier.Send(userCopy.Username + "快到期" + ti.Format(time.DateOnly))
+				// 响应并阻断任务取消信号
+				select {
+				case <-egCtx.Done():
+					return egCtx.Err()
+				default:
+					return global.Notifier.Send(userCopy.Username + "快到期" + ti.Format(time.DateOnly))
+				}
 			})
 		}
 	}

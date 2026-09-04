@@ -1,12 +1,14 @@
 package task
 
 import (
+	"context"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/global"
 )
 
-func (m *Manager) Clear() error {
+func (m *Manager) Clear(ctx context.Context) error {
 	err := dao.Tx(func(tx *sqlx.Tx) (e error) {
 		e = dao.App.UsersDb.UpdateUsersClear(tx)
 		return

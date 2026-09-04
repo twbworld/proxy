@@ -2,8 +2,11 @@ package telegram
 
 import (
 	"fmt"
+	"net"
+	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	tg "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/sirupsen/logrus"
@@ -50,7 +53,20 @@ func NewClient(cfg Config, log *logrus.Logger) (*Client, error) {
 		return &Client{log: log, ProjectName: cfg.ProjectName, TelegramId: cfg.TelegramId}, nil
 	}
 
-	bot, err := tg.NewBotAPI(cfg.Token)
+	// 配置带短超时的 HTTP 客户端，避免网络受阻或不可达时长时间挂起阻塞启动
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   2 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout: 2 * time.Second,
+		},
+		Timeout: 3 * time.Second,
+	}
+
+	bot, err := tg.NewBotAPIWithClient(cfg.Token, tg.APIEndpoint, httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("bot初始化失败: %w", err)
 	}

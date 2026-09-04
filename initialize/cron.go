@@ -1,6 +1,9 @@
 package initialize
 
 import (
+	"context"
+	"time"
+
 	"github.com/robfig/cron/v3"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/task"
@@ -40,9 +43,12 @@ func (i *Initializer) timerStop() {
 }
 
 // 启动一个新的定时任务
-func (i *Initializer) startCronJob(task func() error, schedule string, name string) error {
+func (i *Initializer) startCronJob(task func(context.Context) error, schedule string, name string) error {
 	_, err := i.cron.AddFunc(schedule, func() {
-		if err := task(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Hour)
+		defer cancel()
+
+		if err := task(ctx); err != nil {
 			global.Log.Errorf("定时任务执行失败 [%s]: %v", name, err)
 		}
 	})

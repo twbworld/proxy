@@ -20,19 +20,27 @@ type Initializer struct {
 }
 
 // Run 并发执行所有核心服务的初始化
-func (i *Initializer) Run() error {
-	eg, _ := errgroup.WithContext(context.Background())
+func (i *Initializer) Run(ctx context.Context) error {
+	eg, egCtx := errgroup.WithContext(ctx)
 
 	// 关键任务，失败会终止程序
 	eg.Go(i.initDB)
 
 	// 非关键任务，失败只打印日志，不影响启动
 	eg.Go(func() error {
-		_ = i.initRedis()
+		if err := i.initRedis(egCtx); err != nil {
+			global.Log.Warnf("初始化Redis客户端失败: %v", err)
+		} else {
+			global.Log.Info("初始化Redis服务成功")
+		}
 		return nil
 	})
 	eg.Go(func() error {
-		_ = i.initNotify()
+		if err := i.initNotify(); err != nil {
+			global.Log.Warnf("初始化通知服务失败: %v", err)
+		} else {
+			global.Log.Info("初始化通知服务成功")
+		}
 		return nil
 	})
 
