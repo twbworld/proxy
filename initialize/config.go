@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model/config"
 	"golang.org/x/sync/errgroup"
@@ -120,6 +121,16 @@ func (i *Initializer) HandleConfigChange(ctx context.Context, oldConfig, newConf
 
 	//并发执行可安全热重载的任务
 	eg, egCtx := errgroup.WithContext(ctx)
+
+	// Debug 模式与日志级别热重载
+	if oldConfig.Debug != newConfig.Debug {
+		if newConfig.Debug {
+			global.Log.SetLevel(logrus.DebugLevel)
+		} else {
+			global.Log.SetLevel(logrus.InfoLevel)
+		}
+		global.Log.Infof("热重载日志级别成功, 当前 Debug: %v", newConfig.Debug)
+	}
 
 	// 时区重载
 	if oldConfig.Tz != newConfig.Tz {

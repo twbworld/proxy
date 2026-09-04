@@ -38,22 +38,18 @@ var getSystemPrompt = sync.OnceValue(func() string {
 你是一位专业的 Telegram Bot 智能助理，负责帮助用户管理代理用户数据库。
 你的任务是通过自然语言理解用户的意图，并调用相应的工具来完成操作。
 
-可用操作包括：
-1. 查询用户信息 - 获取指定用户的流量配额、已用流量、到期时间等详情
-2. 新增用户 - 创建新用户。只需提供用户名即可创建，到期时间和流量配额均为可选参数：若用户未指定到期时间或配额，切勿追问用户，直接调用 create_user 工具并将其设为 null
-3. 更新流量 - 修改用户的流量配额（-1 表示不限）
-4. 更新到期时间 - 修改用户的到期日期
-5. 删除用户 - 移除指定用户
-6. 列出所有用户 - 显示所有用户的简要列表
+可用操作：
+1. get_user: 查询用户信息
+2. create_user: 新增用户 (到期时间与配额若未明确给出，请务必传 null，切勿追问)
+3. update_quota: 更新流量配额 (-1 表示不限)
+4. update_expiry: 更新到期时间
+5. delete_user: 删除用户
+6. list_users: 列出所有用户
 
 回答规则：
-- 使用友好、专业的中文回复
-- 操作成功后给出明确的成功提示和结果摘要
-- 操作失败时清晰说明原因并提供可能的解决方案
-- 对于不确定的信息，先查询再回答，严禁编造数据
-- 保持回复简洁明了，避免冗长
-
-请根据用户的具体请求，选择合适的工具调用。
+- 严格遵循工具设定，无法确定的信息先调用工具查询，严禁凭空编造。
+- 操作成功后，向用户提供清晰的结果摘要（若有订阅链接请完整展示）。
+- 为兼容 Telegram 的 Markdown 渲染，排版时请使用单星号 *加粗*（禁止使用双星号），代码块使用反引号 ` + "`" + `代码` + "`" + `。务必确保各类 Markdown 符号成对闭合。
 `)
 })
 
@@ -133,6 +129,8 @@ func (s *llmService) Handle(ctx context.Context, chatID int64, userMessage strin
 	if finalReply == "" {
 		return "抱歉，我无法理解您的请求，请尝试用更明确的描述", nil
 	}
+
+	global.Log.Debug("=====LLM最终回复: ", finalReply)
 
 	// 保存更新后的对话历史
 	if err := s.saveHistory(ctx, historyKey, append(messages, assistantMsg)); err != nil {
@@ -277,8 +275,6 @@ func (s *llmService) executeToolsAndRetry(ctx context.Context, historyKey string
 	}
 
 	finalReply := finalResp.Choices[0].Message.Content
-
-	global.Log.Debug("=====LLM最终回复: ", finalReply)
 
 	// 保存完整对话历史
 	allMessages := append(messages, finalResp.Choices[0].Message)

@@ -148,12 +148,23 @@ func (c *handler) firstStep() error {
 				defer cancel()
 
 				reply, err := llmService.Handle(ctx, c.update.Message.Chat.ID, c.update.Message.Text)
+				if err == nil {
+					// 容错处理：小模型常忽略提示强制输出双星号，在此强制转为单星号兼容 TG 渲染
+					reply = strings.ReplaceAll(reply, "**", "*")
+				}
+
+				msg := tg.NewMessage(c.update.Message.Chat.ID, reply)
 				if err != nil {
 					global.Log.Errorf("LLM 处理失败：%v", err)
-					_ = c.notifier.Send("智能助理处理失败，请稍后重试")
-					return
+					msg.Text = "智能助理处理失败，请稍后重试"
 				}
-				_ = c.notifier.Send(reply)
+
+				// 开启基础 Markdown 解析模式
+				msg.ParseMode = "Markdown"
+
+				if sendErr := c.notifier.SendRaw(msg); sendErr != nil {
+					global.Log.Errorf("发送 LLM 回复到 TG 失败：%v", sendErr)
+				}
 			})
 			return nil
 		}

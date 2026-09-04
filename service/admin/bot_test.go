@@ -116,6 +116,40 @@ func TestBotService_Webhook(t *testing.T) {
 			},
 		},
 		{
+			name: "自然语言对话 - 触发 LLM 助理",
+			setup: func(t *testing.T) {
+				// 前置条件：设定状态机为空
+				err := dao.Tx(func(tx *sqlx.Tx) error {
+					return dao.App.SystemInfoDb.SaveSysVal("1003_step", "", tx)
+				})
+				if err != nil {
+					t.Fatalf("前置数据构建失败: %v", err)
+				}
+			},
+			update: tg.Update{
+				Message: &tg.Message{
+					Chat: &tg.Chat{ID: 1003},
+					Text: "帮我查一下用户信息",
+				},
+			},
+			verify: func(t *testing.T, n *mockNotifier) {
+				// LLM 助理在 mock 环境下因为 RedisClient 为空，会返回降级消息
+				if len(n.sentRaw) == 0 {
+					t.Fatal("期望调用 SendRaw 发送 LLM 处理结果")
+				}
+				msg, ok := n.sentRaw[0].(tg.MessageConfig)
+				if !ok {
+					t.Fatalf("返回的消息类型不匹配，得到 %T", n.sentRaw[0])
+				}
+				if msg.ParseMode != "Markdown" {
+					t.Errorf("预期开启 Markdown 渲染, 实际: %s", msg.ParseMode)
+				}
+				if msg.Text == "" {
+					t.Errorf("期望返回提示文本，得到空文本")
+				}
+			},
+		},
+		{
 			name: "内联菜单回调 - 触发 [查询用户]",
 			update: tg.Update{
 				CallbackQuery: &tg.CallbackQuery{

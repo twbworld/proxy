@@ -369,7 +369,7 @@ func toolListUsers(ctx context.Context, argsJSON string) (string, error) {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("共有 %d 个用户：\n", len(users)))
 	for i, u := range users {
-		sb.WriteString(fmt.Sprintf("%d. %s (ID: %d)\n", i+1, u.Username, u.Id))
+		sb.WriteString(fmt.Sprintf("%d. `%s` (ID: %d)\n", i+1, u.Username, u.Id))
 	}
 
 	return sb.String(), nil

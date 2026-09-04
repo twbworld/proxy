@@ -101,11 +101,11 @@ func FormatUserInfo(user *db.Users) string {
 	}
 	quotaStr := "不限"
 	if user.Quota > 0 {
-		quotaGB := float64(user.Quota) / 1024 / 1024 / 1024
-		quotaStr = fmt.Sprintf("%.2fG", quotaGB)
+		quotaStr = fmt.Sprintf("%.2fG", float64(user.Quota)/(1<<30))
 	}
-	usedGB := float64(user.Download+user.Upload) / 1024 / 1024 / 1024
+	usedGB := float64(user.Download+user.Upload) / (1 << 30)
 
-	return fmt.Sprintf("• 用户名：%s\n• ID: %d\n• 流量配额：%s\n• 已用流量：%.2fG\n• 到期时间：%s",
+	// 给用户名套上反引号(代码块)能够有效避免下划线引起的 Markdown 解析错误
+	return fmt.Sprintf("• 用户名：`%s`\n• ID: %d\n• 流量配额：%s\n• 已用流量：%.2fG\n• 到期时间：%s",
 		user.Username, user.Id, quotaStr, usedGB, user.ExpiryDate)
 }
