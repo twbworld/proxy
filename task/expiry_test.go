@@ -63,7 +63,7 @@ func TestManager_Expiry(t *testing.T) {
 
 	t.Run("没有用户数据的场景", func(t *testing.T) {
 		_, _ = dbConn.Exec("DELETE FROM users") // 确保干净环境
-		if err := manager.Expiry(); err != nil {
+		if err := manager.Expiry(t.Context()); err != nil {
 			t.Errorf("期望返回 nil，实际出错: %v", err)
 		}
 	})
@@ -93,7 +93,7 @@ func TestManager_Expiry(t *testing.T) {
 			dbConn.MustExec(query, v.name, v.date)
 		}
 
-		if err := manager.Expiry(); err != nil {
+		if err := manager.Expiry(t.Context()); err != nil {
 			t.Errorf("执行 Expiry 任务失败: %v", err)
 		}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/twbworld/proxy/dao"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/internal/sqlite"
+	"github.com/twbworld/proxy/model/config"
 )
 
 // mockNotifier 模拟 Telegram 消息发送服务
@@ -49,6 +51,8 @@ func setupTestEnvironment(t *testing.T) {
 	global.Log = logrus.New()
 	global.Log.SetLevel(logrus.FatalLevel) // 屏蔽非必要日志
 	global.Tz = time.UTC
+
+	global.InitConfig(&config.Config{Domain: "https://www.example.com"})
 
 	// 启用内存模式 SQLite
 	client, err := sqlite.NewClient(":memory:", global.Log)
@@ -229,6 +233,57 @@ func TestBotService_Webhook(t *testing.T) {
 
 			if tt.verify != nil {
 				tt.verify(t, notifier)
+			}
+		})
+	}
+}
+
+// 路径: service/admin/bot_test.go（末尾追加）
+func TestGenerateLinksText(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		domain    string
+		username  string
+		wantClash string
+		wantV2ray string
+	}{
+		{
+			name:      "带有 www 前缀域名",
+			domain:    "https://www.example.com",
+			username:  "test_user",
+			wantClash: "https://clash.example.com/test_user.html",
+			wantV2ray: "https://www.example.com/test_user.html",
+		},
+		{
+			name:      "纯根域名",
+			domain:    "https://example.com",
+			username:  "test_user",
+			wantClash: "https://clash.example.com/test_user.html",
+			wantV2ray: "https://example.com/test_user.html",
+		},
+		{
+			name:      "空域名容错",
+			domain:    "",
+			username:  "test_user",
+			wantClash: "",
+			wantV2ray: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			global.InitConfig(&config.Config{Domain: tt.domain})
+			got := generateLinksText(tt.username, false)
+			if tt.domain == "" {
+				if got != "" {
+					t.Errorf("空域名应返回空文本，实际得到: %s", got)
+				}
+				return
+			}
+			if !strings.Contains(got, tt.wantClash) || !strings.Contains(got, tt.wantV2ray) {
+				t.Errorf("链接生成异常, clash期望: %s, v2ray期望: %s, 实际得到: %s", tt.wantClash, tt.wantV2ray, got)
 			}
 		})
 	}

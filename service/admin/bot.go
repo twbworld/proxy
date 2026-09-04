@@ -6,6 +6,7 @@ import (
 	"encoding/json/v2"
 	"errors"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -137,9 +138,28 @@ func (c *handler) firstStep() error {
 	} else {
 		msg.ReplyToMessageID = c.update.Message.MessageID //引用对话
 
-		if errSys != nil {
-			goto SEND
-		} else if t := time.Now().Unix() - info.UpdatedAt; t < 0 || info.UpdatedAt == 0 || t > dao.SysTimeOut {
+		// 检查用户是否处于状态机流程中
+		if errSys != nil || info.Value == "" {
+			// 用户不在任何状态机流程中，使用 LLM 智能助理处理自然语言
+			c.async.GoSafe(func() {
+				llmService := NewLLMService(c.async, c.notifier)
+				timeout := time.Duration(global.Config().LLM.TimeoutSec+5) * time.Second
+				ctx, cancel := context.WithTimeout(context.Background(), timeout)
+				defer cancel()
+
+				reply, err := llmService.Handle(ctx, c.update.Message.Chat.ID, c.update.Message.Text)
+				if err != nil {
+					global.Log.Errorf("LLM 处理失败：%v", err)
+					_ = c.notifier.Send("智能助理处理失败，请稍后重试")
+					return
+				}
+				_ = c.notifier.Send(reply)
+			})
+			return nil
+		}
+
+		// 用户在状态机流程中，检查是否超时
+		if t := time.Now().Unix() - info.UpdatedAt; t < 0 || info.UpdatedAt == 0 || t > dao.SysTimeOut {
 			if t < 0 || info.UpdatedAt == 0 {
 				return fmt.Errorf("系统错误[adfaio]%d", info.UpdatedAt)
 			}
@@ -426,7 +446,7 @@ func (c *handler) userInsert(info *db.SystemInfo) (err error) {
 	}
 
 	// 5. 成功后构建响应内容与操作菜单
-	msg.Text = "*新增成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(user)
+	msg.Text = "*新增成功\\!\\!\\!*\n" + c.getUserMarkdownV2Text(user) + generateLinksText(user.Username, true)
 	msg.ParseMode = "MarkdownV2"
 	msg.ReplyMarkup = tg.NewInlineKeyboardMarkup(
 		tg.NewInlineKeyboardRow(
@@ -450,4 +470,38 @@ func (c *handler) getUserMarkdownV2Text(user *db.Users) string {
 	}
 	text := fmt.Sprintf("账号: `%s`\nid: %d\n到期: %s", user.Username, user.Id, expiryDateStr)
 	return strings.Replace(strings.Replace(text, `-`, `\-`, -1), `.`, `\.`, -1)
+}
+
+// generateLinksText 统筹生成两条订阅链接并可选是否对 MarkdownV2 特殊符号转义
+func generateLinksText(username string, escape bool) string {
+	cfg := global.Config()
+	if cfg == nil || cfg.Domain == "" {
+		return ""
+	}
+	domain := strings.TrimRight(cfg.Domain, "/")
+
+	v2rayLink := fmt.Sprintf("%s/%s.html", domain, username)
+	clashLink := v2rayLink
+
+	if u, err := url.Parse(domain); err == nil && u.Host != "" {
+		hostParts := strings.Split(u.Host, ".")
+		if len(hostParts) >= 2 {
+			if hostParts[0] == "www" {
+				hostParts[0] = "clash"
+			} else if hostParts[0] != "clash" {
+				hostParts = append([]string{"clash"}, hostParts...)
+			}
+			u.Host = strings.Join(hostParts, ".")
+			clashLink = fmt.Sprintf("%s/%s.html", u.String(), username)
+		}
+	}
+
+	text := fmt.Sprintf("\n• 订阅链接:\n  1. Clash: %s\n  2. V2ray: %s", clashLink, v2rayLink)
+	if escape {
+		replacer := strings.NewReplacer(
+			`.`, `\.`, `-`, `\-`, `_`, `\_`, `=`, `\=`,
+		)
+		text = replacer.Replace(text)
+	}
+	return text
 }

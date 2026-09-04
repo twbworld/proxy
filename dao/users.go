@@ -113,6 +113,22 @@ func (u *UsersDb) InsertEmptyUsers(userName string, tx *sqlx.Tx) error {
 	}, tx)
 }
 
+// InsertEmptyUsersWithCustomParams 使用自定义参数创建用户（用于 LLM Tool）
+func (u *UsersDb) InsertEmptyUsersWithCustomParams(username, expiryDate string, quotaBytes int, tx *sqlx.Tx) error {
+	if tx == nil {
+		return errors.New("请使用事务 [llm_insert]")
+	}
+
+	return App.Insert[db.Users](map[string]any{
+		"username":   username,
+		"password":   tool.Hash(username),
+		"quota":      quotaBytes,
+		"expiryDate": expiryDate,
+		"download":   0,
+		"upload":     0,
+	}, tx)
+}
+
 func (u *UsersDb) DelUsersHandle(id uint, tx *sqlx.Tx) (err error) {
 	if tx == nil {
 		return errors.New("请使用事务[ios8ja]")

@@ -75,6 +75,15 @@ type Telegram struct {
 	Id    int64  `mapstructure:"id" json:"id" yaml:"id"`
 }
 
+type LLM struct {
+	Enabled    bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
+	APIKey     string `mapstructure:"api_key" json:"api_key,omitzero" yaml:"api_key"`
+	BaseURL    string `mapstructure:"base_url" json:"base_url,omitzero" yaml:"base_url"`
+	Model      string `mapstructure:"model" json:"model,omitzero" yaml:"model"`
+	TimeoutSec int    `mapstructure:"timeout_sec" json:"timeout_sec,omitzero" yaml:"timeout_sec"`
+	MaxTokens  int    `mapstructure:"max_tokens" json:"max_tokens,omitzero" yaml:"max_tokens"`
+}
+
 func (p *Proxies) SetProxyDefault() {
 	// 如果 Servername 仍为空，且 Server 看起来像域名（排查非 IPv4/IPv6 地址），则兜底
 	if p.Servername == "" && p.Server != "" && net.ParseIP(strings.Trim(p.Server, "[]")) == nil {

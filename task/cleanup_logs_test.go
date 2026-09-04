@@ -52,7 +52,7 @@ func TestCleanUpLogs(t *testing.T) {
 
 	// 执行目标函数
 	m := NewManager()
-	if err := m.CleanUpLogs(); err != nil {
+	if err := m.CleanUpLogs(t.Context()); err != nil {
 		t.Fatalf("CleanUpLogs 运行失败: %v", err)
 	}
 
@@ -80,7 +80,7 @@ func TestCleanUpLogs(t *testing.T) {
 		oldLogPath := filepath.Join(tempDir, oldLogName)
 		_ = os.WriteFile(oldLogPath, []byte("mock"), 0644)
 
-		if err := m.CleanUpLogs(); err != nil {
+		if err := m.CleanUpLogs(t.Context()); err != nil {
 			t.Fatalf("CleanUpLogs 运行失败: %v", err)
 		}
 

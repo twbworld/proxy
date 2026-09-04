@@ -2,7 +2,7 @@ package config
 
 import "encoding/json/v2"
 
-// viper要用到mapstructure/yaml
+// viper 要用到 mapstructure/yaml
 type Config struct {
 	Debug            bool      `mapstructure:"debug" json:"debug" yaml:"debug"`
 	ProjectName      string    `mapstructure:"project_name" json:"project_name" yaml:"project_name"`
@@ -17,12 +17,13 @@ type Config struct {
 	Database         Database  `mapstructure:"database" json:"database" yaml:"database"`
 	Redis            Redis     `mapstructure:"redis" json:"redis" yaml:"redis"`
 	Telegram         Telegram  `mapstructure:"telegram" json:"telegram" yaml:"telegram"`
+	LLM              LLM       `mapstructure:"llm" json:"llm" yaml:"llm"`
 	ClashPath        string    `mapstructure:"clash_path" json:"clash_path" yaml:"clash_path"`
 	Subscribe        Subscribe `mapstructure:"subscribe" json:"subscribe" yaml:"subscribe"`
 	Proxies          []Proxies `mapstructure:"proxies" json:"proxies" yaml:"proxies"`
 }
 
-// DeepCopy 使用JSON序列化和反序列化实现Config对象的深度拷贝
+// DeepCopy 使用 JSON 序列化和反序列化实现 Config 对象的深度拷贝
 func (c *Config) DeepCopy() *Config {
 	newConfig := new(Config)
 	data, _ := json.Marshal(c)
