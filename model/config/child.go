@@ -95,12 +95,12 @@ func (p *Proxies) SetProxyDefault() {
 		if !p.Root {
 			name.WriteString("外网信息复杂_理智分辨真假_")
 		}
-		name.WriteString(fmt.Sprintf("%s_%s", p.Network, p.Server))
+		fmt.Fprintf(&name, "%s_%s", p.Network, p.Server)
 		if p.RealityOpts.PublicKey != "" {
 			name.WriteString("_reality")
 		}
 		if p.Flow != "" {
-			name.WriteString(fmt.Sprintf("_%s", p.Flow))
+			fmt.Fprintf(&name, "_%s", p.Flow)
 		}
 		if p.XhttpOpts.DownloadSettings != nil && p.XhttpOpts.DownloadSettings.Server != "" {
 			name.WriteString("_downSet")
