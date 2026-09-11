@@ -1,7 +1,7 @@
 
 **Proxy**
 ===========
-[![](https://github.com/twbworld/proxy/workflows/ci/badge.svg?branch=main)](https://github.com/twbworld/proxy/actions)
+[![CI](https://github.com/twbworld/proxy/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/twbworld/proxy/actions/workflows/ci.yaml)
 [![](https://img.shields.io/github/tag/twbworld/proxy?logo=github)](https://github.com/twbworld/proxy)
 ![](https://img.shields.io/badge/language-golang-cyan)
 [![](https://img.shields.io/github/license/twbworld/proxy)](https://github.com/twbworld/proxy/blob/main/LICENSE)
@@ -12,12 +12,12 @@
 ### 本项目有两个作用:
 
 1. 用户管理(增删改查)
-    > 程序作为中间人, 通过与`telegram-bot`进行交互,实现对接用户数据库, 进行用户管理  
+    > 程序作为中间人, 通过与`telegram-bot`进行交互,实现对接用户数据库, 进行用户管理
     > 如喜欢用shell进行用户管理, 建议出门左转使用[Jrohy/trojan](https://github.com/Jrohy/trojan)哟
 2. 程序返回客户端可识别的翻墙配置, 即订阅功能
     > 访问含用户名的特定订阅链接, 程序返回`v2ray`和`clash`等客户端可以识别的base64码或`clash`配置文件; 在客户端上配置订阅链接即可翻墙;
 
-## 目录结构 : 
+## 目录结构 :
 ``` sh
 ├── clash.yaml              # Clash 配置模板
 ├── config.example.yaml     # 配置文件示例 (复制为 config.yaml)
