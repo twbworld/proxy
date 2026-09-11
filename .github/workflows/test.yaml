@@ -15,12 +15,18 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Add config.yaml
-        run: cp config.example.yaml config.yaml
+        run: |
+          if [ -f config.example.yaml ]; then
+            cp config.example.yaml config.yaml
+          else
+            echo "config.example.yaml 不存在，跳过生成 config.yaml"
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
+          cache: true
 
       - name: Go Version
         run: go version
