@@ -75,13 +75,17 @@ type Telegram struct {
 	Id    int64  `mapstructure:"id" json:"id" yaml:"id"`
 }
 
+type modelConfig struct {
+	Url     string `mapstructure:"url" json:"url,omitzero" yaml:"url"`
+	Model   string `mapstructure:"model" json:"model,omitzero" yaml:"model"`
+	Auth    string `mapstructure:"auth" json:"auth,omitzero" yaml:"auth"`
+	Timeout int64  `mapstructure:"timeout" json:"timeout,omitzero" yaml:"timeout"`
+}
+
 type LLM struct {
-	Enabled    bool   `mapstructure:"enabled" json:"enabled" yaml:"enabled"`
-	APIKey     string `mapstructure:"api_key" json:"api_key,omitzero" yaml:"api_key"`
-	BaseURL    string `mapstructure:"base_url" json:"base_url,omitzero" yaml:"base_url"`
-	Model      string `mapstructure:"model" json:"model,omitzero" yaml:"model"`
-	TimeoutSec int    `mapstructure:"timeout_sec" json:"timeout_sec,omitzero" yaml:"timeout_sec"`
-	MaxTokens  int    `mapstructure:"max_tokens" json:"max_tokens,omitzero" yaml:"max_tokens"`
+	modelConfig `mapstructure:",squash"`
+	Size        string   `mapstructure:"size" json:"size,omitzero" yaml:"size"`
+	Temperature *float32 `mapstructure:"temperature" json:"temperature,omitempty" yaml:"temperature,omitempty"`
 }
 
 func (p *Proxies) SetProxyDefault() {

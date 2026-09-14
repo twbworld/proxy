@@ -81,7 +81,7 @@ func TestBotService_Webhook(t *testing.T) {
 
 	notifier := &mockNotifier{}
 	async := &mockAsync{}
-	svc := NewBotService(async, notifier)
+	svc := NewBotService(async, notifier, NewLLMService())
 
 	tests := []struct {
 		name    string

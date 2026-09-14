@@ -43,6 +43,14 @@ func (i *Initializer) Run(ctx context.Context) error {
 		}
 		return nil
 	})
+	eg.Go(func() error {
+		if err := i.initLlm(); err != nil {
+			global.Log.Warnf("初始化LLM服务失败: %v", err)
+		} else {
+			global.Log.Info("初始化LLM服务成功")
+		}
+		return nil
+	})
 
 	return eg.Wait()
 }

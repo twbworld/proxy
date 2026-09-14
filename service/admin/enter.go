@@ -11,6 +11,6 @@ type ServiceGroup struct {
 
 func NewServiceGroup(async common.AsyncService, notifier global.NotifierService) ServiceGroup {
 	return ServiceGroup{
-		BotService: NewBotService(async, notifier),
+		BotService: NewBotService(async, notifier, NewLLMService()),
 	}
 }

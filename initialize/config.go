@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/twbworld/proxy/global"
 	"github.com/twbworld/proxy/model/config"
+	"github.com/twbworld/proxy/model/enum"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/fsnotify/fsnotify"
@@ -179,6 +180,16 @@ func (i *Initializer) HandleConfigChange(ctx context.Context, oldConfig, newConf
 			return nil
 		})
 	}
+	if !reflect.DeepEqual(oldConfig.LLM, newConfig.LLM) {
+		eg.Go(func() error {
+			if err := i.initLlm(); err != nil {
+				global.Log.Errorf("热重载LLM服务失败: %v", err)
+				return err
+			}
+			global.Log.Info("热重载LLM服务成功")
+			return nil
+		})
+	}
 
 	if err := eg.Wait(); err != nil {
 		global.Log.Errorf("并发热重载过程中发生错误: %v", err)
@@ -193,15 +204,15 @@ func (i *Initializer) HandleConfigChange(ctx context.Context, oldConfig, newConf
 
 // handleConfig 处理和设置配置的默认值
 func handleConfig(c *config.Config) {
-	c.StaticDir = strings.TrimRight(cmp.Or(c.StaticDir, "static"), "/")
 	c.ProjectName = cmp.Or(c.ProjectName, "my-project")
 	c.GinAddr = cmp.Or(c.GinAddr, ":80")
+	c.ClashPath = cmp.Or(c.ClashPath, "config.yaml")
+	c.StaticDir = strings.TrimRight(cmp.Or(c.StaticDir, "static"), "/")
 	c.GinLogPath = cmp.Or(c.GinLogPath, "log/gin.log")
 	c.RunLogPath = cmp.Or(c.RunLogPath, "log/run.log")
 	c.Tz = cmp.Or(c.Tz, "Asia/Shanghai")
 	c.Database.Type = cmp.Or(c.Database.Type, "sqlite")
 	c.Database.SqlitePath = cmp.Or(c.Database.SqlitePath, "data.db")
-	c.ClashPath = cmp.Or(c.ClashPath, "config.yaml")
 
 	if c.LogRetentionDays == 0 {
 		c.LogRetentionDays = 7
@@ -217,5 +228,14 @@ func handleConfig(c *config.Config) {
 	}
 	if c.Redis.HistoryLockExpiry == 0 {
 		c.Redis.HistoryLockExpiry = 10
+	}
+	if c.Subscribe.UpdateInterval == 0 {
+		c.Subscribe.UpdateInterval = 24
+	}
+	for idx := range c.LLM {
+		c.LLM[idx].Size = cmp.Or(c.LLM[idx].Size, string(enum.ModelSmall))
+		if c.LLM[idx].Timeout == 0 {
+			c.LLM[idx].Timeout = 30
+		}
 	}
 }

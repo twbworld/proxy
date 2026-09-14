@@ -18,6 +18,9 @@ run_log_path: log/run.log
 log_retention_days: 7
 # 时区
 tz: Asia/Shanghai
+# 允许跨域的域名
+cors:
+  - "*"
 # 客户端订阅配置
 subscribe:
   # 文件命名,避免重复修改, clash客户端可能会存在多个订阅配置
@@ -61,21 +64,18 @@ telegram:
   id: 123456789
 # LLM 智能助理配置 (可选)
 llm:
-  # 是否启用 LLM 功能
-  enabled: true
-  # API Key
-  api_key: sk-xxx
-  # API 基础 URL(兼容 OpenAI 格式)
-  base_url: http://localhost:3000/v1
-  # 模型名称
-  model: qwen3.5-flash
-  # 请求超时时间 (秒)
-  timeout_sec: 30
-  # 最大生成 token 数
-  max_tokens: 1024
-# 允许跨域的域名
-cors:
-  - "*"
+  - # LLM的大小, small|medium|large
+    size: small
+    # LLM的api地址, "v1"结尾
+    url: "http://127.0.0.1:11434/v1"
+    # LLM模型名称
+    model: "qwen3:latest"
+    # LLM模型秘钥
+    auth: ""
+    # 超时时间(秒)
+    timeout: 30
+    # LLM的温度,不设置则由LLM服务决定, qwen3默认0.6
+    temperature: 0.6
 proxies:
   # vless-tcp-vision-reality
   - name: "外网信息复杂_理智分辨真假_reality"

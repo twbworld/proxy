@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/twbworld/proxy/internal/llm"
 	"github.com/twbworld/proxy/internal/telegram"
 	"github.com/twbworld/proxy/model/config"
 )
@@ -19,6 +20,7 @@ var (
 	DBClient    DBService
 	RedisClient RedisService
 	Notifier    NotifierService = telegram.NewNoopClient(nil) // 默认绑定空操作通知实例
+	LlmService  llm.Service
 )
 
 // InitConfig 初始化或安全替换配置

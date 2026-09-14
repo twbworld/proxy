@@ -34,18 +34,19 @@ type BotService interface {
 type botService struct {
 	async    common.AsyncService
 	notifier global.NotifierService
+	llmSvc   LLMService
 }
 
 type handler struct {
-	notifier global.NotifierService
-	async    common.AsyncService
+	*botService
 	update   *tg.Update
 }
 
-func NewBotService(async common.AsyncService, notifier global.NotifierService) BotService {
+func NewBotService(async common.AsyncService, notifier global.NotifierService, llmSvc LLMService) BotService {
 	return &botService{
 		async:    async,
 		notifier: notifier,
+		llmSvc:   llmSvc,
 	}
 }
 
@@ -57,9 +58,8 @@ func (t *botService) Webhook(ctx *gin.Context) error {
 
 	//为避免高并发的数据覆盖, 每个请求都构建新的handler
 	handler := &handler{
+		botService: t,
 		update:   update,
-		async:    t.async,
-		notifier: t.notifier,
 	}
 	return handler.handle()
 }
@@ -142,12 +142,11 @@ func (c *handler) firstStep() error {
 		if errSys != nil || info.Value == "" {
 			// 用户不在任何状态机流程中，使用 LLM 智能助理处理自然语言
 			c.async.GoSafe(func() {
-				llmService := NewLLMService(c.async, c.notifier)
-				timeout := time.Duration(global.Config().LLM.TimeoutSec+5) * time.Second
+				timeout := 120 * time.Second
 				ctx, cancel := context.WithTimeout(context.Background(), timeout)
 				defer cancel()
 
-				reply, err := llmService.Handle(ctx, c.update.Message.Chat.ID, c.update.Message.Text)
+				reply, err := c.llmSvc.Handle(ctx, c.update.Message.Chat.ID, c.update.Message.Text)
 				if err == nil {
 					// 容错处理：小模型常忽略提示强制输出双星号，在此强制转为单星号兼容 TG 渲染
 					reply = strings.ReplaceAll(reply, "**", "*")
