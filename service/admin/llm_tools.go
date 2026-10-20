@@ -23,10 +23,10 @@ func getToolDefinitions() []openai.Tool {
 			Function: &openai.FunctionDefinition{
 				Name:        "get_user",
 				Description: "查询指定用户的详细信息",
-				Strict:      true,
+				Strict:      true, //Structured Outputs 的严格模式开关(约束Response的`message.tool_calls[].function.arguments/name`值, 如json格式的arguments和真实存在的name)
 				Parameters: map[string]any{
 					"type":                 "object",
-					"additionalProperties": false,
+					"additionalProperties": false, //是否约束参数下的字段,避免幻觉参数
 					"properties": map[string]any{
 						"username": map[string]string{"type": "string", "description": "用户名"},
 					},

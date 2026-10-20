@@ -23,13 +23,13 @@ const DisableThinkingKey CtxKey = "disable_thinking"
 type ChatRequest struct {
 	Size            enum.LLMSize
 	SystemPrompt    enum.SystemPrompt
-	Messages        []common.LLMMessage
-	Tools           []openai.Tool
-	SchemaName      enum.SchemaName
-	Schema          any
-	Strict          bool
-	Temperature     *float32
-	DisableThinking bool
+	Messages        []common.LLMMessage // 包含上下文历史以及当前最新问题/工具反馈
+	Tools           []openai.Tool // 可选：如果不为空，则启用原生 Tool Calling 工具调用
+	SchemaName      enum.SchemaName // 可选：如果不为空，则启用 Structured Outputs(结构化输出)
+	Schema          any //对应的 JSON Schema 定义
+	Strict          bool //Structured Outputs 的严格模式开关(约束Response的`message.content`文本格式, 如json)
+	Temperature     *float32 //LLM热度
+	DisableThinking bool //是否在底层API关闭LLM思考过程(thinking模式)
 }
 
 type Service interface {
@@ -88,7 +88,10 @@ func (c *client) Chat(ctx context.Context, req *ChatRequest) (*openai.ChatComple
 	openaiReq := openai.ChatCompletionRequest{
 		Model:    llmConfig.Model,
 		Messages: messages,
-		Tools:    req.Tools,
+	}
+
+	if len(req.Tools) > 0 {
+		openaiReq.Tools = req.Tools
 	}
 
 	if temp := cmp.Or(req.Temperature, llmConfig.Temperature); temp != nil && *temp != 0 {

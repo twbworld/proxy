@@ -1,21 +1,21 @@
 
-**Proxy**
+**Proxy** [DEPRECATED]
 ===========
+[![Status](https://img.shields.io/badge/status-deprecated-inactive?style=flat&color=red)](https://github.com/MHSanaei/3x-ui)
 [![CI](https://github.com/twbworld/proxy/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/twbworld/proxy/actions/workflows/ci.yaml)
-[![](https://img.shields.io/github/tag/twbworld/proxy?logo=github)](https://github.com/twbworld/proxy)
-![](https://img.shields.io/badge/language-golang-cyan)
 [![](https://img.shields.io/github/license/twbworld/proxy)](https://github.com/twbworld/proxy/blob/main/LICENSE)
 
-## 简介
+> ### ⚠️ 本项目已终止维护 (Archived / Deprecated)
+> 本项目后续不再提供功能更新与维护，已全面迁移并替换为成熟的开源项目：
+> 👉 **[MHSanaei/3x-ui](https://github.com/MHSanaei/3x-ui)**
+---
+
+## 项目归档简介 (Archive)
 **翻墙订阅链接服务 和 用户管理**
 
-### 本项目有两个作用:
-
-1. 用户管理(增删改查)
-    > 程序作为中间人, 通过与`telegram-bot`进行交互,实现对接用户数据库, 进行用户管理
-    > 如喜欢用shell进行用户管理, 建议出门左转使用[Jrohy/trojan](https://github.com/Jrohy/trojan)哟
-2. 程序返回客户端可识别的翻墙配置, 即订阅功能
-    > 访问含用户名的特定订阅链接, 程序返回`v2ray`和`clash`等客户端可以识别的base64码或`clash`配置文件; 在客户端上配置订阅链接即可翻墙;
+### 历史功能说明:
+1. **用户管理 (增删改查)**：通过 `telegram-bot` 交互对接数据库管理用户。
+2. **多客户端订阅**：提供识别特定用户名的订阅链接，动态下发 `v2ray` (Base64) 与 `clash` (YAML) 格式配置。
 
 ## 目录结构 :
 ``` sh
